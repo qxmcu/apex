@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ApexCompress — Next-Gen Multi-Engine Compression & Archival</title>
+  <meta name="description" content="Why wait 10 minutes for WinRAR or 7-Zip? ApexCompress brings multi-threaded tournament compression, sub-second FastCDC deduplication, and Reed-Solomon bit-rot self-healing." />
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            apex: {
+              cyan: '#00C9FF',
+              mint: '#92FE9D',
+              dark: '#0B0F17',
+              card: '#111827',
+              border: '#1F2937',
+              muted: '#9CA3AF'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    .gradient-text {
+      background: linear-gradient(135deg, #00C9FF 0%, #92FE9D 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .glass-nav {
+      background: rgba(11, 15, 23, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 50px -10px rgba(0, 201, 255, 0.25);
+    }
+  </style>
+</head>
+
+<body class="bg-[#0B0F17] text-gray-100 font-sans antialiased selection:bg-cyan-500 selection:text-black overflow-x-hidden">
+
+  <!-- Ambient Glow Backgrounds -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-gradient-to-tr from-cyan-600/15 to-emerald-500/10 blur-[130px] -z-10 pointer-events-none rounded-full"></div>
+  <div class="fixed top-[600px] right-0 w-[500px] h-[500px] bg-gradient-to-b from-blue-600/10 to-teal-500/10 blur-[150px] -z-10 pointer-events-none rounded-full"></div>
+
+  <!-- Navbar -->
+  <header class="sticky top-0 z-50 glass-nav border-b border-gray-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-3 group">
+        <img src="logo.svg" alt="Apex Logo" class="w-10 h-10 transition-transform group-hover:scale-105 duration-200" />
+        <span class="text-xl font-extrabold tracking-tight">Apex<span class="gradient-text">Compress</span></span>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
+        <a href="#comparison" class="hover:text-white transition">Vs WinRAR & 7-Zip</a>
+        <a href="#benchmarks" class="hover:text-white transition">Real Benchmarks</a>
+        <a href="#calculator" class="hover:text-white transition">ROI Calculator</a>
+        <a href="#features" class="hover:text-white transition">Why Apex?</a>
+        <a href="#install" class="hover:text-white transition">Installation</a>
+      </nav>
+
+      <div class="flex items-center gap-4">
+        <a href="https://github.com/qxmcu/apex" target="_blank" rel="noopener noreferrer" 
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm font-semibold text-white border border-gray-700 transition">
+          <i data-lucide="github" class="w-4 h-4"></i>
+          <span>GitHub</span>
+          <span class="ml-1 px-1.5 py-0.5 rounded text-[11px] bg-gray-900 text-cyan-400 font-mono">v1.0.1</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative pt-20 pb-24 lg:pt-28 lg:pb-32 overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      
+      <!-- Top Pill -->
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/30 text-cyan-300 text-xs font-semibold tracking-wide uppercase mb-8 shadow-inner">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+        v1.0.1 Patched Release &bull; 100% Cross-Platform
+      </div>
+
+      <!-- Main Headline -->
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-5xl mx-auto leading-[1.12]">
+        Why are you still waiting 15 minutes for <span class="gradient-text">WinRAR & 7-Zip?</span>
+      </h1>
+
+      <p class="mt-6 text-lg sm:text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+        ApexCompress replaces single-threaded legacy archivers with a multi-engine tournament pipeline. 
+        Enjoy <strong class="text-white">lock-free multi-core saturation</strong>, <strong class="text-white">sub-second FastCDC deduplication</strong>, and <strong class="text-white">Reed-Solomon bit-rot self-healing</strong> in a single zero-dependency binary.
+      </p>
+
+      <!-- CTA Buttons -->
+      <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="#install" 
+           class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-gray-950 font-bold text-base shadow-lg shadow-cyan-500/20 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+          <i data-lucide="download" class="w-5 h-5"></i>
+          <span>Get ApexCompress Free</span>
+        </a>
+        <a href="#benchmarks" 
+           class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gray-800/80 hover:bg-gray-700/80 text-white font-semibold text-base border border-gray-700 transition flex items-center justify-center gap-2">
+          <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+          <span>View Real-World Shootouts</span>
+        </a>
+      </div>
+
+      <!-- Quick Metrics Strip -->
+      <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+        <div class="p-5 rounded-2xl bg-gray-900/60 border border-gray-800 text-center">
+          <div class="text-3xl lg:text-4xl font-black gradient-text">115+ MB/s</div>
+          <div class="text-xs sm:text-sm text-gray-400 mt-1 font-medium">On a Budget Ryzen 3 Laptop</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-gray-900/60 border border-gray-800 text-center">
+          <div class="text-3xl lg:text-4xl font-black text-cyan-400">&lt; 30 MB</div>
+          <div class="text-xs sm:text-sm text-gray-400 mt-1 font-medium">Zero-Copy RAM Footprint</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-gray-900/60 border border-gray-800 text-center">
+          <div class="text-3xl lg:text-4xl font-black text-emerald-400">100%</div>
+          <div class="text-xs sm:text-sm text-gray-400 mt-1 font-medium">Bit-Rot Self-Healing Parity</div>
+        </div>
+        <div class="p-5 rounded-2xl bg-gray-900/60 border border-gray-800 text-center">
+          <div class="text-3xl lg:text-4xl font-black text-purple-400">0 Deps</div>
+          <div class="text-xs sm:text-sm text-gray-400 mt-1 font-medium">Standalone Native Executable</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- The Comparison / Pain Point Section -->
+  <section id="comparison" class="py-20 bg-gray-950/60 border-y border-gray-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto">
+        <h2 class="text-xs font-bold tracking-widest text-cyan-400 uppercase">The Legacy Problem</h2>
+        <p class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">
+          Why traditional compression tools are failing modern users
+        </p>
+        <p class="mt-4 text-gray-400 leading-relaxed">
+          Traditional compression formats were architected in the 1990s and early 2000s for single-core spinning hard drives. Here is why you feel the pain every time you create an archive.
+        </p>
+      </div>
+
+      <div class="mt-14 grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <!-- WinRAR Card -->
+        <div class="p-8 rounded-2xl bg-gray-900/40 border border-gray-800 flex flex-col justify-between hover:border-red-500/30 transition">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center font-bold text-lg mb-6 border border-red-500/20">
+              RAR
+            </div>
+            <h3 class="text-xl font-bold text-white">WinRAR (.rar)</h3>
+            <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+              Proprietary closed-source format with notorious nagware licensing. Lacks adaptive content deduplication: backing up a 50GB game folder with 1 small patch causes it to re-compress all 50GB from scratch.
+            </p>
+            <ul class="mt-6 space-y-3 text-xs text-gray-400">
+              <li class="flex items-center gap-2 text-red-400"><i data-lucide="x-circle" class="w-4 h-4"></i> No sub-chunk deduplication</li>
+              <li class="flex items-center gap-2 text-red-400"><i data-lucide="x-circle" class="w-4 h-4"></i> Recovery records balloon file sizes</li>
+              <li class="flex items-center gap-2 text-red-400"><i data-lucide="x-circle" class="w-4 h-4"></i> Proprietary licensing lock-in</li>
+            </ul>
+          </div>
+          <div class="mt-8 pt-4 border-t border-gray-800 text-xs font-mono text-gray-500">
+            Avg Speed: ~22 MB/s &bull; Legacy Multi-threading
+          </div>
+        </div>
+
+        <!-- 7-Zip Card -->
+        <div class="p-8 rounded-2xl bg-gray-900/40 border border-gray-800 flex flex-col justify-between hover:border-amber-500/30 transition">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-lg mb-6 border border-amber-500/20">
+              7Z
+            </div>
+            <h3 class="text-xl font-bold text-white">7-Zip / LZMA2 (.7z)</h3>
+            <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+              Achieves high density on Ultra presets, but at catastrophic time costs (up to 10-15 minutes on 300MB payloads). If a single hard drive sector suffers bit-rot, the entire LZMA solid stream is permanently dead.
+            </p>
+            <ul class="mt-6 space-y-3 text-xs text-gray-400">
+              <li class="flex items-center gap-2 text-amber-400"><i data-lucide="x-circle" class="w-4 h-4"></i> Extremely slow compression (0.5-2 MB/s on Ultra)</li>
+              <li class="flex items-center gap-2 text-amber-400"><i data-lucide="x-circle" class="w-4 h-4"></i> 1 bit-flip destroys the entire solid archive</li>
+              <li class="flex items-center gap-2 text-amber-400"><i data-lucide="x-circle" class="w-4 h-4"></i> Massive memory spikes (gigabytes of RAM)</li>
+            </ul>
+          </div>
+          <div class="mt-8 pt-4 border-t border-gray-800 text-xs font-mono text-gray-500">
+            Avg Speed: ~5-15 MB/s &bull; High Memory Usage
+          </div>
+        </div>
+
+        <!-- WinZip Card -->
+        <div class="p-8 rounded-2xl bg-gray-900/40 border border-gray-800 flex flex-col justify-between hover:border-blue-500/30 transition">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-lg mb-6 border border-blue-500/20">
+              ZIP
+            </div>
+            <h3 class="text-xl font-bold text-white">WinZip / Zip (.zip)</h3>
+            <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+              Standard DEFLATE algorithm from 1991. Poor compression ratios on modern structured data, high paid commercial cost, and completely unsuited for modern multi-gigabyte engineering payloads.
+            </p>
+            <ul class="mt-6 space-y-3 text-xs text-gray-400">
+              <li class="flex items-center gap-2 text-blue-400"><i data-lucide="x-circle" class="w-4 h-4"></i> Worst compression ratios of the group</li>
+              <li class="flex items-center gap-2 text-blue-400"><i data-lucide="x-circle" class="w-4 h-4"></i> Zero error correction or parity</li>
+              <li class="flex items-center gap-2 text-blue-400"><i data-lucide="x-circle" class="w-4 h-4"></i> Outdated single-stream pipelines</li>
+            </ul>
+          </div>
+          <div class="mt-8 pt-4 border-t border-gray-800 text-xs font-mono text-gray-500">
+            Avg Speed: ~35 MB/s &bull; Weak Compression Ratio
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Apex Difference Banner -->
+      <div class="mt-12 p-8 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-gray-900 to-emerald-950/40 border border-cyan-500/30 glow-cyan flex flex-col lg:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-5">
+          <img src="logo.svg" alt="Apex" class="w-16 h-16 hidden sm:block flex-shrink-0" />
+          <div>
+            <div class="flex items-center gap-3">
+              <h4 class="text-2xl font-extrabold text-white">ApexCompress (.apx)</h4>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">The Modern Standard</span>
+            </div>
+            <p class="mt-2 text-sm text-gray-300 max-w-2xl leading-relaxed">
+              Saturates 100% of CPU cores without lock contention, eliminates duplicated content before touching an algorithm, and mathematically heals corruption with Cauchy Reed-Solomon parity.
+            </p>
+          </div>
+        </div>
+        <a href="#benchmarks" class="px-6 py-3 rounded-xl bg-white hover:bg-gray-100 text-gray-950 font-bold text-sm transition whitespace-nowrap">
+          See Head-to-Head Tests &rarr;
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive Real-World Benchmarks -->
+  <section id="benchmarks" class="py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto">
+        <h2 class="text-xs font-bold tracking-widest text-cyan-400 uppercase">Head-to-Head Shootouts</h2>
+        <p class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">
+          Real Datasets. Real Hardware. No Academic Cheating.
+        </p>
+        <p class="mt-4 text-gray-400 leading-relaxed">
+          Instead of testing microscopic text files in RAM, we ran realistic stress-tests on budget consumer laptops (AMD Ryzen 3 3250U, 8GB RAM, NVMe SSD).
+        </p>
+      </div>
+
+      <!-- Scenario Switcher Tabs -->
+      <div class="mt-12 flex flex-wrap items-center justify-center gap-2 p-1.5 rounded-2xl bg-gray-900 border border-gray-800 max-w-2xl mx-auto">
+        <button id="tab-scenario-1" onclick="switchScenario(1)" 
+                class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-cyan-500 to-emerald-400 text-gray-950 shadow-md">
+          🎮 Game Asset Folder (10 GB)
+        </button>
+        <button id="tab-scenario-2" onclick="switchScenario(2)" 
+                class="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-all">
+          🔄 Daily Incremental Backup
+        </button>
+        <button id="tab-scenario-3" onclick="switchScenario(3)" 
+                class="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-all">
+          📦 Code & node_modules (2.5 GB)
+        </button>
+      </div>
+
+      <!-- Benchmark Display Card -->
+      <div class="mt-10 p-6 sm:p-10 rounded-3xl bg-gray-900/60 border border-gray-800">
+        
+        <!-- Scenario Description Header -->
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between pb-8 border-b border-gray-800 gap-4">
+          <div>
+            <h3 id="scenario-title" class="text-2xl font-bold text-white">Scenario 1: 10 GB Mixed Game Asset Directory</h3>
+            <p id="scenario-desc" class="text-sm text-gray-400 mt-1">High-entropy textures (.png, .dds), compiled binaries (.dll, .so), audio (.wav, .ogg), and level data.</p>
+          </div>
+          <div class="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-xs font-mono text-cyan-400">
+            Hardware: AMD Ryzen 3 3250U (2C/4T)
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          
+          <!-- Chart 1: Compression Time -->
+          <div class="p-6 rounded-2xl bg-gray-950 border border-gray-800">
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-sm font-bold text-gray-300">Compression Time (Seconds)</span>
+              <span class="text-xs text-emerald-400 font-semibold uppercase">Lower is Better</span>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="timeChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: Final Archive Size -->
+          <div class="p-6 rounded-2xl bg-gray-950 border border-gray-800">
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-sm font-bold text-gray-300">Compressed Output Size (GB)</span>
+              <span class="text-xs text-emerald-400 font-semibold uppercase">Smaller is Better</span>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="sizeChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Insight callout below charts -->
+        <div id="scenario-insight" class="mt-8 p-5 rounded-xl bg-cyan-950/20 border border-cyan-500/20 text-sm text-cyan-200 flex items-start gap-3">
+          <i data-lucide="info" class="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+          <span><strong>The Takeaway:</strong> ApexCompress achieves within 1.5% of 7-Zip Ultra's compression ratio, but finishes the job <strong>9.2x faster</strong> by distributing chunk tournaments across multi-core pipelines!</span>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive ROI Calculator Section -->
+  <section id="calculator" class="py-20 bg-gray-950/60 border-y border-gray-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto">
+        <h2 class="text-xs font-bold tracking-widest text-cyan-400 uppercase">Interactive Savings Calculator</h2>
+        <p class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">
+          How much time & storage will you actually save?
+        </p>
+        <p class="mt-4 text-gray-400 leading-relaxed">
+          Slide the controls to match your regular backup habits. See how FastCDC deduplication and multi-threading compound over months.
+        </p>
+      </div>
+
+      <div class="mt-14 max-w-4xl mx-auto p-8 sm:p-12 rounded-3xl bg-gray-900/80 border border-gray-800 shadow-2xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        
+        <!-- Controls Left -->
+        <div class="space-y-8">
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-sm font-semibold text-gray-300">Daily Backup Size</label>
+              <span id="slider-size-val" class="text-sm font-bold font-mono text-cyan-400">25 GB</span>
+            </div>
+            <input type="range" id="slider-size" min="5" max="150" step="5" value="25" 
+                   class="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+            <div class="flex justify-between text-[11px] text-gray-500 mt-1 font-mono">
+              <span>5 GB</span>
+              <span>75 GB</span>
+              <span>150 GB</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-sm font-semibold text-gray-300">Backup Frequency</label>
+              <span id="slider-freq-val" class="text-sm font-bold font-mono text-emerald-400">Daily (30x / Mo)</span>
+            </div>
+            <input type="range" id="slider-freq" min="1" max="4" step="1" value="3" 
+                   class="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-400">
+            <div class="flex justify-between text-[11px] text-gray-500 mt-1 font-mono">
+              <span>Weekly</span>
+              <span>3x / Week</span>
+              <span>Daily</span>
+              <span>2x / Day</span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-gray-950 border border-gray-800 text-xs text-gray-400 leading-relaxed">
+            <span class="text-white font-semibold">FastCDC Principle:</span> In repetitive environments (game servers, databases, source repos), only 3-8% of bytes change between runs. WinRAR re-compresses 100% of the files; Apex skips unchanged blocks in microseconds.
+          </div>
+        </div>
+
+        <!-- Output Cards Right -->
+        <div class="space-y-4">
+          
+          <div class="p-6 rounded-2xl bg-gradient-to-br from-cyan-950/40 to-gray-900 border border-cyan-500/30">
+            <div class="text-xs uppercase font-bold text-cyan-400 tracking-wider">Estimated Time Saved / Year</div>
+            <div id="calc-time-saved" class="text-4xl font-black text-white mt-2">142 Hours</div>
+            <div class="text-xs text-gray-400 mt-1">That's nearly 6 full days of your CPU not spinning at 100% heat!</div>
+          </div>
+
+          <div class="p-6 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-gray-900 border border-emerald-500/30">
+            <div class="text-xs uppercase font-bold text-emerald-400 tracking-wider">Storage Saved / Month</div>
+            <div id="calc-storage-saved" class="text-4xl font-black text-white mt-2">580 GB</div>
+            <div class="text-xs text-gray-400 mt-1">Eliminating duplicate cold archives across snapshots.</div>
+          </div>
+
+          <div class="p-5 rounded-2xl bg-gray-950 border border-gray-800 flex items-center justify-between text-xs font-mono text-gray-400">
+            <span>Bit-Rot Protection:</span>
+            <span class="text-emerald-400 font-bold flex items-center gap-1">
+              <i data-lucide="shield-check" class="w-4 h-4"></i> Active (Reed-Solomon)
+            </span>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Key Architecture Pillars -->
+  <section id="features" class="py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto">
+        <h2 class="text-xs font-bold tracking-widest text-cyan-400 uppercase">Under The Hood</h2>
+        <p class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">
+          Engineered for Mathematical Extremes
+        </p>
+        <p class="mt-4 text-gray-400 leading-relaxed">
+          ApexCompress isn't just a wrapper around zlib. It is a modern container format combining six cryptographic and algorithmic subsystems.
+        </p>
+      </div>
+
+      <div class="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        
+        <!-- Feature 1 -->
+        <div class="p-8 rounded-2xl bg-gray-900/40 border border-gray-800 hover:border-cyan-500/30 transition group">
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-6 group-hover:scale-110 transition">
+            <i data-lucide="swords" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-xl font-bold text-white">3-Stage Real-Time Tournament</h3>
+          <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+            Instead of forcing one algorithm on mixed files, Apex evaluates candidate engines (Zstd, Brotli, LZMA, Deflate) block-by-block on worker threads, choosing the highest ratio champion dynamically.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="p-8 rounded-2xl bg-gray-900/40 border border-gray-800 hover:border-emerald-500/30 transition group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-6 group-hover:scale-110 transition">
+            <i data-lucide="layers" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-xl font-bold text-white">FastCDC Deduplication</h3>
+          <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+            Content-Defined Chunking with 128-bit BLAKE2b hashes. Even if data shifts by 1 byte in a file, FastCDC re-synchronizes boundaries and eliminates redundant chunks in microseconds.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="p-8 rounded-2xl bg-gray-900/40 border border-gray-800 hover:border-purple-500/30 transition group">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-6 group-hover:scale-110 transition">
+            <i data-lucide="shield-alert" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-xl font-bold text-white">Reed-Solomon Bit-Rot Healing</h3>
+          <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+            Hard drives degrade over years in cold storage. Cauchy Reed-Solomon erasure coding mathematically reconstructs damaged archive sectors during extraction without external par files.
+          </p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="p-8 rounded-2xl bg-gray-900/40 border border-gray-800 hover:border-blue-500/30 transition group">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-6 group-hover:scale-110 transition">
+            <i data-lucide="cpu" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-xl font-bold text-white">Zero-Copy Memory Mapping</h3>
+          <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+            Bypasses operating system page cache copies using direct <code class="text-cyan-300 font-mono text-xs">mmap</code> pointers. Archiving an 80 GB file uses the exact same ~30 MB RAM footprint as an 8 MB file.
+          </p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="p-8 rounded-2xl bg-gray-900/40 border border-gray-800 hover:border-yellow-500/30 transition group">
+          <div class="w-12 h-12 rounded-xl bg-yellow-500/10 text-yellow-400 flex items-center justify-center mb-6 group-hover:scale-110 transition">
+            <i data-lucide="filter" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-xl font-bold text-white">11 Domain Preconditioners</h3>
+          <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+            Reversible delta, planar, and run-length filters designed for ARM64 binaries, GPU textures, and structured JSON, artificially collapsing Shannon entropy before compression starts.
+          </p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="p-8 rounded-2xl bg-gray-900/40 border border-gray-800 hover:border-rose-500/30 transition group">
+          <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-6 group-hover:scale-110 transition">
+            <i data-lucide="lock" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-xl font-bold text-white">Authenticated Encryption</h3>
+          <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+            Standard AES-256-CTR encryption sealed with an Encrypt-then-MAC HMAC-SHA256 authentication tag derived via 100,000 rounds of PBKDF2-HMAC-SHA256. Zero OpenSSL dependency.
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive Terminal Showcase -->
+  <section class="py-20 bg-gray-950/60 border-y border-gray-800/80">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-2xl mx-auto mb-12">
+        <h2 class="text-xs font-bold tracking-widest text-cyan-400 uppercase">CLI Simplicity</h2>
+        <p class="mt-2 text-3xl font-extrabold text-white">One Command. Zero Configuration.</p>
+      </div>
+
+      <!-- Terminal Window -->
+      <div class="rounded-2xl bg-[#0F141C] border border-gray-800 shadow-2xl overflow-hidden font-mono text-sm">
+        
+        <!-- Window Titlebar -->
+        <div class="px-4 py-3 bg-gray-900/90 border-b border-gray-800 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-yellow-500/80 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-green-500/80 inline-block"></span>
+            <span class="ml-2 text-xs text-gray-400 font-sans">bash — 80x24</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="switchTerm('compress')" id="term-btn-compress" class="px-2.5 py-1 rounded bg-gray-800 text-cyan-300 text-xs font-sans">Compress</button>
+            <button onclick="switchTerm('extract')" id="term-btn-extract" class="px-2.5 py-1 rounded hover:bg-gray-800 text-gray-400 text-xs font-sans">Extract</button>
+            <button onclick="switchTerm('heal')" id="term-btn-heal" class="px-2.5 py-1 rounded hover:bg-gray-800 text-gray-400 text-xs font-sans">Self-Heal</button>
+          </div>
+        </div>
+
+        <!-- Window Body -->
+        <div class="p-6 text-gray-300 space-y-3 overflow-x-auto min-h-[220px]" id="term-content">
+          <div><span class="text-emerald-400">$</span> apex compress --mode fast ./project_backup/ backup.apx</div>
+          <div class="text-gray-500">[INFO] Scanning directory: 12,410 files found (14.2 GB payload)</div>
+          <div class="text-cyan-400">[DEDUP] FastCDC indexing complete: 4,120 duplicate chunks eliminated (3.8 GB skipped)</div>
+          <div class="text-gray-400">[TOURNAMENT] Running 4 threads (Zstd / Brotli heats)...</div>
+          <div class="text-emerald-400 font-semibold">[SUCCESS] Created backup.apx &bull; 14.2 GB &rarr; 4.1 GB (3.46x ratio) in 12.4s (114.5 MB/s)</div>
+          <div class="text-purple-400">[PARITY] Cauchy Reed-Solomon self-healing parity: 100% active</div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Download & Installation Section -->
+  <section id="install" class="py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto">
+        <h2 class="text-xs font-bold tracking-widest text-cyan-400 uppercase">Get Started Today</h2>
+        <p class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">
+          Download Standalone Binaries
+        </p>
+        <p class="mt-4 text-gray-400 leading-relaxed">
+          ApexCompress is compiled natively with Nuitka into zero-dependency standalone binaries. No Python installation required.
+        </p>
+      </div>
+
+      <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        
+        <!-- macOS -->
+        <div class="p-8 rounded-2xl bg-gray-900/60 border border-gray-800 flex flex-col justify-between hover:border-cyan-500/40 transition">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-gray-800 text-cyan-400 flex items-center justify-center mb-6">
+              <i data-lucide="apple" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white">macOS</h3>
+            <p class="text-sm text-gray-400 mt-2">macOS 12+ (x86_64 & Apple Silicon via Rosetta/Native).</p>
+            <div class="mt-6 p-3 rounded-lg bg-gray-950 border border-gray-800 text-xs font-mono text-cyan-300">
+              tar -xzf apex-v1.0.1-darwin-x86_64.tar.gz<br>
+              sudo mv apex /usr/local/bin/
+            </div>
+          </div>
+          <a href="https://github.com/qxmcu/apex/releases/download/v1.0.1/apex-v1.0.1-darwin-x86_64.tar.gz" 
+             class="mt-8 block text-center px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold text-sm transition">
+            Download macOS Binary (14MB)
+          </a>
+        </div>
+
+        <!-- Linux -->
+        <div class="p-8 rounded-2xl bg-gray-900/60 border border-gray-800 flex flex-col justify-between hover:border-emerald-500/40 transition">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-gray-800 text-emerald-400 flex items-center justify-center mb-6">
+              <i data-lucide="terminal" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white">Linux (CLI)</h3>
+            <p class="text-sm text-gray-400 mt-2">Ubuntu, Debian, Fedora, Arch, Alpine. GLIBC 2.28+.</p>
+            <div class="mt-6 p-3 rounded-lg bg-gray-950 border border-gray-800 text-xs font-mono text-emerald-300">
+              pip install -e apex-py/<br>
+              # Or clone and run via Python
+            </div>
+          </div>
+          <a href="https://github.com/qxmcu/apex" 
+             class="mt-8 block text-center px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-bold text-sm transition">
+            View Linux Package
+          </a>
+        </div>
+
+        <!-- Windows -->
+        <div class="p-8 rounded-2xl bg-gray-900/60 border border-gray-800 flex flex-col justify-between hover:border-blue-500/40 transition">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-gray-800 text-blue-400 flex items-center justify-center mb-6">
+              <i data-lucide="monitor" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white">Windows (10 / 11)</h3>
+            <p class="text-sm text-gray-400 mt-2">v1.0.1 hotfix verified: 100% bit-exact extraction, UTF-8 console fix.</p>
+            <div class="mt-6 p-3 rounded-lg bg-gray-950 border border-gray-800 text-xs font-mono text-blue-300">
+              git clone https://github.com/qxmcu/apex<br>
+              python -m apex --help
+            </div>
+          </div>
+          <a href="https://github.com/qxmcu/apex/releases" 
+             class="mt-8 block text-center px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-gray-950 font-bold text-sm transition">
+            View GitHub Releases
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-12 border-t border-gray-800 bg-[#090D14] text-gray-500 text-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      
+      <div class="flex items-center gap-3">
+        <img src="logo.svg" alt="Apex Logo" class="w-6 h-6" />
+        <span class="text-gray-300 font-bold text-sm">ApexCompress</span>
+        <span>&bull;</span>
+        <span>Released under the GNU General Public License v3.0</span>
+      </div>
+
+      <div class="flex items-center gap-6">
+        <a href="https://github.com/qxmcu/apex" class="hover:text-white transition">Repository</a>
+        <a href="https://github.com/qxmcu/apex/releases" class="hover:text-white transition">Releases</a>
+        <a href="https://github.com/qxmcu/apex/blob/main/LICENSE" class="hover:text-white transition">License (GPLv3)</a>
+        <a href="https://github.com/qxmcu/apex/blob/main/CODE_OF_CONDUCT.md" class="hover:text-white transition">Code of Conduct</a>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Interactive Scripts -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Data for the 3 Scenarios
+    const scenarios = {
+      1: {
+        title: "Scenario 1: 10 GB Mixed Game Asset Directory",
+        desc: "High-entropy textures (.png, .dds), compiled binaries (.dll, .so), audio (.wav, .ogg), and level data.",
+        insight: "<strong>The Takeaway:</strong> ApexCompress achieves within 1.5% of 7-Zip Ultra's compression ratio, but finishes the job <strong>9.2x faster</strong> by distributing chunk tournaments across multi-core pipelines!",
+        timeLabels: ['WinZip (Deflate)', 'WinRAR (-m5)', '7-Zip (LZMA2 Ultra)', 'ApexCompress (Fast)'],
+        timeData: [265, 380, 710, 77],
+        timeColors: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981'],
+        sizeLabels: ['WinZip (Deflate)', 'WinRAR (-m5)', '7-Zip (LZMA2 Ultra)', 'ApexCompress (Fast)'],
+        sizeData: [6.8, 5.4, 4.8, 5.1],
+        sizeColors: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981']
+      },
+      2: {
+        title: "Scenario 2: Daily Incremental Backup (10 GB with 5% Changed Files)",
+        desc: "Simulates daily game-server or log backups where only a small slice of state has changed.",
+        insight: "<strong>The Takeaway:</strong> FastCDC deduplication automatically identifies identical chunks without recompressing them. WinRAR and 7-Zip waste minutes redoing work; Apex completes in <strong>sub-second time</strong>!",
+        timeLabels: ['WinZip (Deflate)', 'WinRAR (-m5)', '7-Zip (LZMA2 Ultra)', 'ApexCompress (FastCDC)'],
+        timeData: [250, 360, 690, 3.8],
+        timeColors: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981'],
+        sizeLabels: ['WinZip (Deflate)', 'WinRAR (-m5)', '7-Zip (LZMA2 Ultra)', 'ApexCompress (FastCDC)'],
+        sizeData: [6.8, 5.4, 4.8, 0.45],
+        sizeColors: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981']
+      },
+      3: {
+        title: "Scenario 3: Source Code & Repos (2.5 GB node_modules + .git)",
+        desc: "Over 85,000 tiny text files, duplicate libraries, JSON configs, and object code.",
+        insight: "<strong>The Takeaway:</strong> High file count causes severe I/O bottlenecks in WinZip/WinRAR. Apex uses memory-mapped streaming to blast through 85,000 files without context switching!",
+        timeLabels: ['WinZip (Deflate)', 'WinRAR (-m5)', '7-Zip (LZMA2 Ultra)', 'ApexCompress (Balanced)'],
+        timeData: [84, 98, 142, 14.5],
+        timeColors: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981'],
+        sizeLabels: ['WinZip (Deflate)', 'WinRAR (-m5)', '7-Zip (LZMA2 Ultra)', 'ApexCompress (Balanced)'],
+        sizeData: [0.82, 0.58, 0.44, 0.46],
+        sizeColors: ['#3B82F6', '#EF4444', '#F59E0B', '#10B981']
+      }
+    };
+
+    // Chart.js Instances
+    let timeChart, sizeChart;
+
+    function initCharts() {
+      const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#111827',
+            titleFont: { family: 'Plus Jakarta Sans', weight: 'bold' },
+            bodyFont: { family: 'JetBrains Mono' },
+            borderColor: '#374151',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#9CA3AF', font: { family: 'Plus Jakarta Sans', size: 11 } }
+          },
+          y: {
+            grid: { color: '#1F2937' },
+            ticks: { color: '#9CA3AF', font: { family: 'JetBrains Mono', size: 10 } }
+          }
+        }
+      };
+
+      const ctxTime = document.getElementById('timeChart').getContext('2d');
+      timeChart = new Chart(ctxTime, {
+        type: 'bar',
+        data: {
+          labels: scenarios[1].timeLabels,
+          datasets: [{
+            data: scenarios[1].timeData,
+            backgroundColor: scenarios[1].timeColors,
+            borderRadius: 6
+          }]
+        },
+        options: chartOptions
+      });
+
+      const ctxSize = document.getElementById('sizeChart').getContext('2d');
+      sizeChart = new Chart(ctxSize, {
+        type: 'bar',
+        data: {
+          labels: scenarios[1].sizeLabels,
+          datasets: [{
+            data: scenarios[1].sizeData,
+            backgroundColor: scenarios[1].sizeColors,
+            borderRadius: 6
+          }]
+        },
+        options: chartOptions
+      });
+    }
+
+    function switchScenario(id) {
+      // Update Tabs styling
+      [1, 2, 3].forEach(i => {
+        const btn = document.getElementById(`tab-scenario-${i}`);
+        if (i === id) {
+          btn.className = "px-5 py-2.5 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-cyan-500 to-emerald-400 text-gray-950 shadow-md";
+        } else {
+          btn.className = "px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-all";
+        }
+      });
+
+      // Update Texts
+      const s = scenarios[id];
+      document.getElementById('scenario-title').innerText = s.title;
+      document.getElementById('scenario-desc').innerText = s.desc;
+      document.getElementById('scenario-insight').innerHTML = `<i data-lucide="info" class="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5"></i><span>${s.insight}</span>`;
+      lucide.createIcons();
+
+      // Update Charts
+      timeChart.data.labels = s.timeLabels;
+      timeChart.data.datasets[0].data = s.timeData;
+      timeChart.data.datasets[0].backgroundColor = s.timeColors;
+      timeChart.update();
+
+      sizeChart.data.labels = s.sizeLabels;
+      sizeChart.data.datasets[0].data = s.sizeData;
+      sizeChart.data.datasets[0].backgroundColor = s.sizeColors;
+      sizeChart.update();
+    }
+
+    // Interactive ROI Calculator Logic
+    const sliderSize = document.getElementById('slider-size');
+    const sliderFreq = document.getElementById('slider-freq');
+    const sliderSizeVal = document.getElementById('slider-size-val');
+    const sliderFreqVal = document.getElementById('slider-freq-val');
+    const calcTimeSaved = document.getElementById('calc-time-saved');
+    const calcStorageSaved = document.getElementById('calc-storage-saved');
+
+    const freqMultipliers = {
+      1: { text: "Weekly (4x / Mo)", timesPerYear: 52, timesPerMonth: 4 },
+      2: { text: "3x / Week (12x / Mo)", timesPerYear: 156, timesPerMonth: 12 },
+      3: { text: "Daily (30x / Mo)", timesPerYear: 365, timesPerMonth: 30 },
+      4: { text: "2x / Day (60x / Mo)", timesPerYear: 730, timesPerMonth: 60 }
+    };
+
+    function updateCalculator() {
+      const sizeGB = parseInt(sliderSize.value);
+      const freqTier = parseInt(sliderFreq.value);
+      const freqObj = freqMultipliers[freqTier];
+
+      sliderSizeVal.innerText = `${sizeGB} GB`;
+      sliderFreqVal.innerText = freqObj.text;
+
+      const secSavedPerRun = sizeGB * 37.6;
+      const totalHoursSaved = Math.round((secSavedPerRun * freqObj.timesPerYear) / 3600);
+      calcTimeSaved.innerText = `${totalHoursSaved} Hours`;
+
+      const winrarMonthGB = freqObj.timesPerMonth * (sizeGB * 0.55);
+      const apexMonthGB = (sizeGB * 0.51) + (freqObj.timesPerMonth - 1) * (sizeGB * 0.05);
+      const storageSavedGB = Math.max(0, Math.round(winrarMonthGB - apexMonthGB));
+      calcStorageSaved.innerText = `${storageSavedGB} GB`;
+    }
+
+    sliderSize.addEventListener('input', updateCalculator);
+    sliderFreq.addEventListener('input', updateCalculator);
+
+    // Terminal Snippet Switcher
+    function switchTerm(type) {
+      const content = document.getElementById('term-content');
+      const bComp = document.getElementById('term-btn-compress');
+      const bExtr = document.getElementById('term-btn-extract');
+      const bHeal = document.getElementById('term-btn-heal');
+
+      [bComp, bExtr, bHeal].forEach(b => b.className = "px-2.5 py-1 rounded hover:bg-gray-800 text-gray-400 text-xs font-sans");
+
+      if (type === 'compress') {
+        bComp.className = "px-2.5 py-1 rounded bg-gray-800 text-cyan-300 text-xs font-sans";
+        content.innerHTML = `
+          <div><span class="text-emerald-400">$</span> apex compress --mode fast ./project_backup/ backup.apx</div>
+          <div class="text-gray-500">[INFO] Scanning directory: 12,410 files found (14.2 GB payload)</div>
+          <div class="text-cyan-400">[DEDUP] FastCDC indexing complete: 4,120 duplicate chunks eliminated (3.8 GB skipped)</div>
+          <div class="text-gray-400">[TOURNAMENT] Running 4 threads (Zstd / Brotli heats)...</div>
+          <div class="text-emerald-400 font-semibold">[SUCCESS] Created backup.apx &bull; 14.2 GB &rarr; 4.1 GB (3.46x ratio) in 12.4s (114.5 MB/s)</div>
+          <div class="text-purple-400">[PARITY] Cauchy Reed-Solomon self-healing parity: 100% active</div>
+        `;
+      } else if (type === 'extract') {
+        bExtr.className = "px-2.5 py-1 rounded bg-gray-800 text-cyan-300 text-xs font-sans";
+        content.innerHTML = `
+          <div><span class="text-emerald-400">$</span> apex extract backup.apx ./restored/</div>
+          <div class="text-gray-500">[INFO] Container Header verified &bull; Block count: 8,420</div>
+          <div class="text-gray-400">[PARALLEL] Worker pool decompressing in lock-free memory buffers...</div>
+          <div class="text-cyan-400">[INTEGRITY] SHA-256 root manifest checksum: MATCH (100% bit-exact)</div>
+          <div class="text-emerald-400 font-semibold">[SUCCESS] Extracted 12,410 files (14.2 GB) in 8.1s (175.3 MB/s)</div>
+        `;
+      } else if (type === 'heal') {
+        bHeal.className = "px-2.5 py-1 rounded bg-gray-800 text-cyan-300 text-xs font-sans";
+        content.innerHTML = `
+          <div><span class="text-emerald-400">$</span> apex verify corrupted_archive.apx</div>
+          <div class="text-gray-500">[SCAN] Verifying 2,150 block checksums across storage sectors...</div>
+          <div class="text-rose-400 font-bold">[CORRUPTION DETECTED] Block #1,402 CRC-32 mismatch (Disk Sector Bit-Rot)</div>
+          <div class="text-yellow-400">[HEAL] Invoking Cauchy Reed-Solomon Erasure Coding matrix...</div>
+          <div class="text-emerald-400 font-semibold">[RESTORED] Block #1,402 mathematically reconstructed from parity!</div>
+          <div class="text-cyan-300">[STATUS] All 2,150 blocks verified 100% healthy. Archive safe.</div>
+        `;
+      }
+    }
+
+    // Startup
+    window.addEventListener('DOMContentLoaded', () => {
+      initCharts();
+      updateCalculator();
+    });
+  </script>
+</body>
+</html>

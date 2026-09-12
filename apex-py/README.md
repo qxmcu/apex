@@ -14,6 +14,8 @@ ApexCompress (`apex`) is an ultra-high-performance compression system engineered
 
 Instead of forcing a single, static algorithm across heterogeneous data, Apex executes an intelligent **3-Stage Real-Time Tournament** across CPU cores—combining reversible domain preconditioning filters, qualifying heats, sticky champion momentum, content-aware deduplication, Reed-Solomon bit-rot self-healing, and authenticated encryption into a unified, zero-dependency standalone native tool.
 
+> ⚠️ **Note for Windows Users**: We are currently tracking and patching a few OS-specific edge cases related to Python's Windows implementation. If you experience bugs, please hold tight as a patch is being actively deployed!
+
 ---
 
 ## Table of Contents

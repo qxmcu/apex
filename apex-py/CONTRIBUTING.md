@@ -1,6 +1,6 @@
 # Contributing to ApexCompress ⚡📦
 
-Thank you for your interest in contributing to **ApexCompress**! ApexCompress is an open-source project designed to push the boundaries of data compression science through adaptive multi-engine tournaments, domain-specific preconditioning, self-healing parity, and military-grade security.
+Thank you for your interest in contributing to **ApexCompress**! ApexCompress is an open-source project designed to push the boundaries of data compression science through adaptive multi-engine tournaments, domain-specific preconditioning, self-healing parity, and authenticated encryption.
 
 Whether you are fixing a bug, adding a new compression engine, designing a specialized domain preconditioning filter, optimizing SIMD routines, or improving documentation, we welcome your contributions!
 

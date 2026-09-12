@@ -9,3 +9,30 @@ you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
+
+===============================================================================
+Third-Party Open Source Software & Licenses
+===============================================================================
+
+When built or distributed as a standalone binary, ApexCompress embeds or
+statically links components from the following open-source projects:
+
+1. Zstandard (zstd)
+   Copyright (c) 2016-present, Meta Platforms, Inc. and affiliates.
+   License: BSD 3-Clause License / GPLv2
+   https://github.com/facebook/zstd
+
+2. Brotli
+   Copyright (c) 2009, 2010, 2013-2016 by the Brotli Authors.
+   License: MIT License
+   https://github.com/google/brotli
+
+3. Python (CPython Runtime)
+   Copyright (c) 2001-2026 Python Software Foundation. All rights reserved.
+   License: Python Software Foundation License Version 2
+   https://www.python.org/psf/license/
+
+4. Nuitka
+   Copyright (c) 2010-2026 Kay Hayen.
+   License: Apache License, Version 2.0
+   https://github.com/Nuitka/Nuitka

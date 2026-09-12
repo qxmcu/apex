@@ -22,6 +22,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, BinaryIO, Callable, Dict, Generator, List, Optional, Tuple
 
+# Cross-platform O_BINARY for safe binary os.open()
+O_BINARY = getattr(os, "O_BINARY", 0)
+
 from apex.engine import (
     CompressedBlockResult,
     Mode,
@@ -710,7 +713,7 @@ def _safe_write_all(fd: int, data: Any):
 def _write_single_file_fast(target_path: str, data: Any, mode: int, mtime: float):
     """High-performance direct file creation using low-level OS syscalls."""
     try:
-        fd = os.open(target_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
+        fd = os.open(target_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, mode)
     except OSError:
         # Conflict: existing read-only file, directory, or permissions issue
         try:
@@ -724,7 +727,7 @@ def _write_single_file_fast(target_path: str, data: Any, mode: int, mtime: float
                 os.unlink(target_path)
         except OSError:
             pass
-        fd = os.open(target_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
+        fd = os.open(target_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, mode)
 
     try:
         if data:
@@ -1001,7 +1004,7 @@ def decompress_archive(
                     _write_symlink_fast(target_str, file_entry.link_target, file_entry.mtime)
                 else:
                     try:
-                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, file_entry.mode)
+                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
                     except OSError:
                         try:
                             os.chmod(target_str, 0o777)
@@ -1014,7 +1017,7 @@ def decompress_archive(
                                 os.unlink(target_str)
                         except OSError:
                             pass
-                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, file_entry.mode)
+                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
 
                     rem = file_entry.size
                     try:
@@ -1182,7 +1185,7 @@ def decompress_archive(
                     # Large file (> 4MB): Stream directly with zero-copy NVMe I/O
                     flush_batch()
                     try:
-                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, file_entry.mode)
+                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
                     except OSError:
                         try:
                             os.chmod(target_str, 0o777)
@@ -1195,7 +1198,7 @@ def decompress_archive(
                                 os.unlink(target_str)
                         except OSError:
                             pass
-                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, file_entry.mode)
+                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
 
                     rem = file_entry.size
                     try:

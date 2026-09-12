@@ -7,6 +7,8 @@
 <br clear="left"/>
 
 > **The Next-Generation Adaptive Tournament Multi-Engine Compression Tool & Self-Healing Container Format.**
+>
+> 🌐 **Interactive Visual Benchmarks & Landing Page:** [https://qxmcu.github.io/apex/](https://qxmcu.github.io/apex/)
 
 ApexCompress (`apex`) is an ultra-high-performance compression system engineered to achieve the **maximum mathematical compression ratio** on any arbitrary file, mixed structured dataset, or multi-gigabyte folder.
 

@@ -51,7 +51,7 @@ def print_banner():
 / /_\\\\|  __/ /_     | |/ /_\\\\|  __/| | | | | | |_) | _   
 \\____/ \\___|\\__|    |_|\\____/ \\___||_| |_| |_| .__/ (_)  
                                              |_|         
-{RESET}{DIM}  Adaptive Multi-Engine Tournament Compression System v1.0.0{RESET}
+{RESET}{DIM}  Adaptive Multi-Engine Tournament Compression System v1.0.1{RESET}
 """
     print(banner)
 

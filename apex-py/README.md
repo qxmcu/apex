@@ -132,7 +132,8 @@ Most industry archivers were built 15 to 30 years ago around a single, fixed com
 | Capability | **ApexCompress (`apex`)** | **Gzip / Tar** | **Bzip2** | **XZ / 7-Zip** | **Zstandard (`zstd`)** | **Brotli** | **RAR** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Engine Selection** | **Dynamic Multi-Engine Tournament** | Static (Deflate) | Static (BWT) | Static (LZMA/LZMA2)| Static (FSE + LZ77) | Static (Lz77 + Huffman)| Static (Proprietary LZ) |
-| **Adaptive Block Switching** | **YES (Per 2 MB Block)** | NO | NO | NO | NO | NO | NO |
+| **Adaptive Block Sizing** | **YES (Dynamic 2MB / 4MB Blocks)** | NO | NO | NO | NO | NO | NO |
+| **Parallel Multi-Core Execution**| **YES (Native Lock-Free Pools)** | NO (Needs `pigz`) | NO (Needs `pbzip2`) | YES | YES | NO | YES |
 | **Domain Preconditioning** | **YES (11 Transforms: Delta, Planar, BCJ, RLE, Textures, Meshes)** | None | None | Partial (x86 BCJ in 7z) | None | None | Partial (Audio/RGB filters) |
 | **Self-Healing Parity** | **YES (Cauchy Reed-Solomon $GF(2^8)$ MDS)** | None built-in (needs `par2`) | None built-in (needs `par2`) | None built-in (needs `par2`) | None built-in | None built-in | Optional (`.rev` parity volumes) |
 | **Content-Aware Deduplication** | **YES (FastCDC + BLAKE2b 128-bit Fingerprints)** | None | None | None | Window match (`--long` up to 2GB) | None | File-level duplicates only |

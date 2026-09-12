@@ -1,4 +1,8 @@
-# ApexCompress (`apex`) ⚡📦
+<div align="center">
+  <img src="logo.svg" alt="ApexCompress Logo" width="250" />
+</div>
+
+# ⚡ ApexCompress (`apex`) ⚡📦
 
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0)
 [![CI Tests](https://img.shields.io/badge/Test_Suite-32%2F32_Passing-brightgreen.svg)]()

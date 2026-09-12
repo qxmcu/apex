@@ -731,7 +731,7 @@ def _write_single_file_fast(target_path: str, data: Any, mode: int, mtime: float
             _safe_write_all(fd, data)
         try:
             os.utime(fd, (mtime, mtime))
-        except (OSError, NotImplementedError):
+        except (OSError, NotImplementedError, TypeError):
             try:
                 os.utime(target_path, (mtime, mtime))
             except OSError:
@@ -764,7 +764,7 @@ def _write_symlink_fast(target_path: str, link_target: str, mtime: float):
 
     try:
         os.utime(target_path, (mtime, mtime), follow_symlinks=False)
-    except (OSError, NotImplementedError):
+    except (OSError, NotImplementedError, TypeError):
         pass
 
 
@@ -1037,7 +1037,7 @@ def decompress_archive(
                             maybe_report()
                         try:
                             os.utime(fd, (file_entry.mtime, file_entry.mtime))
-                        except (OSError, NotImplementedError):
+                        except (OSError, NotImplementedError, TypeError):
                             try:
                                 os.utime(target_str, (file_entry.mtime, file_entry.mtime))
                             except OSError:
@@ -1218,7 +1218,7 @@ def decompress_archive(
                             maybe_report()
                         try:
                             os.utime(fd, (file_entry.mtime, file_entry.mtime))
-                        except (OSError, NotImplementedError):
+                        except (OSError, NotImplementedError, TypeError):
                             try:
                                 os.utime(target_str, (file_entry.mtime, file_entry.mtime))
                             except OSError:

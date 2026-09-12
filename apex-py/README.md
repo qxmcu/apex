@@ -1,15 +1,12 @@
-<img src="logo.svg" align="left" width="140" hspace="20" vspace="10" alt="ApexCompress Logo" />
+<img src="logo.svg" align="left" width="130" hspace="20" vspace="5" alt="ApexCompress Logo" />
 
-# ⚡ ApexCompress (`apex`) ⚡📦
+### ⚡ ApexCompress (`apex`) ⚡📦
 
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0)
-[![CI Tests](https://img.shields.io/badge/Test_Suite-32%2F32_Passing-brightgreen.svg)]()
-[![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)]()
-[![Python](https://img.shields.io/badge/Python-3.9_%7C_3.10_%7C_3.11_%7C_3.12_%7C_3.13_%7C_3.14-blue.svg)]()
-<br>
-[![Standalone Binary](https://img.shields.io/badge/Standalone_Binary-Zero_External_Dependencies-orange.svg)]()
-[![Integrity](https://img.shields.io/badge/Integrity-100%25_Bit--Exact_SHA--256-success.svg)]()
-[![Security](https://img.shields.io/badge/Security-AES--256--CTR_%2B_HMAC--SHA256-red.svg)]()
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0) [![CI Tests](https://img.shields.io/badge/Test_Suite-32%2F32_Passing-brightgreen.svg)]() [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)]()
+
+[![Python](https://img.shields.io/badge/Python-3.9_%7C_3.10_%7C_3.11_%7C_3.12_%7C_3.13_%7C_3.14-blue.svg)]() [![Standalone Binary](https://img.shields.io/badge/Standalone_Binary-Zero_External_Dependencies-orange.svg)]()
+
+[![Integrity](https://img.shields.io/badge/Integrity-100%25_Bit--Exact_SHA--256-success.svg)]() [![Security](https://img.shields.io/badge/Security-AES--256--CTR_%2B_HMAC--SHA256-red.svg)]()
 
 <br clear="left"/>
 

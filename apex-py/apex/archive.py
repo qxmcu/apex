@@ -90,9 +90,17 @@ class ArchiveManifest:
     @classmethod
     def from_json(cls, json_str: str) -> "ArchiveManifest":
         data = json.loads(json_str)
-        files = [
-            FileEntry(
-                rel_path=f["path"],
+        files = []
+        for f in data.get("files", []):
+            rel_path = f["path"]
+            if rel_path.startswith("/") or rel_path.startswith("\\"):
+                raise ValueError(f"Absolute path detected in archive manifest: {rel_path}")
+            parts = rel_path.replace("\\", "/").split("/")
+            if ".." in parts:
+                raise ValueError(f"Path traversal detected in archive manifest: {rel_path}")
+            
+            files.append(FileEntry(
+                rel_path=rel_path,
                 size=f["size"],
                 mode=f.get("mode", 0o644),
                 mtime=f.get("mtime", time.time()),
@@ -100,9 +108,8 @@ class ArchiveManifest:
                 is_symlink=f.get("is_symlink", False),
                 link_target=f.get("link_target", ""),
                 is_dir=f.get("is_dir", False),
-            )
-            for f in data.get("files", [])
-        ]
+            ))
+            
         return cls(
             is_dir=data.get("is_dir", False),
             root_name=data.get("root_name", "archive"),

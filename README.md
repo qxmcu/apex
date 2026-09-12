@@ -1,18 +1,73 @@
 <img src="logo.svg" align="left" width="160" hspace="20" alt="ApexCompress Logo" />
 
-### ⚡ ApexCompress (`apex`) ⚡📦
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0) [![CI Tests](https://img.shields.io/badge/Test_Suite-32%2F32_Passing-brightgreen.svg)]() [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)]() [![Python](https://img.shields.io/badge/Python-3.9_%7C_3.10_%7C_3.11_%7C_3.12_%7C_3.13_%7C_3.14-blue.svg)]()<br>
+# APEX
+
+### Adaptive Multi-Engine Lossless Compression & Archival
+
+[![Status](https://img.shields.io/badge/Status-Production_Release-brightgreen.svg)]() [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0) [![CI Tests](https://img.shields.io/badge/Test_Suite-32%2F32_Passing-brightgreen.svg)]() [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)]() [![Python](https://img.shields.io/badge/Python-3.9_%7C_3.10_%7C_3.11_%7C_3.12_%7C_3.13_%7C_3.14-blue.svg)]()<br>
 [![Standalone Binary](https://img.shields.io/badge/Standalone_Binary-Zero_External_Dependencies-orange.svg)]() [![Integrity](https://img.shields.io/badge/Integrity-100%25_Bit--Exact_SHA--256-success.svg)]() [![Security](https://img.shields.io/badge/Security-AES--256--CTR_%2B_HMAC--SHA256-red.svg)]()
 
 <br clear="left"/>
 
-> **The Next-Generation Adaptive Tournament Multi-Engine Compression Tool & Self-Healing Container Format.**
->
-> 🌐 **Interactive Visual Benchmarks & Landing Page:** [https://qxmcu.github.io/apex/](https://qxmcu.github.io/apex/)
+APEX is a lossless compression and archival system that dynamically selects reversible preprocessing transforms, compression engines, and deduplication strategies on a per-block basis.
 
-ApexCompress (`apex`) is an ultra-high-performance compression system engineered to achieve the **maximum mathematical compression ratio** on any arbitrary file, mixed structured dataset, or multi-gigabyte folder.
+**Status: Production Release · v1.0.1**
 
-Instead of forcing a single, static algorithm across heterogeneous data, Apex executes an intelligent **3-Stage Real-Time Tournament** across CPU cores—combining reversible domain preconditioning filters, qualifying heats, sticky champion momentum, content-aware deduplication, Reed-Solomon bit-rot self-healing, and authenticated encryption into a unified, zero-dependency standalone native tool.
+> APEX is designed for archival and high-performance compression.
+> As with any storage system, maintain independent backups of irreplaceable data.
+
+**[📊 Reproduce benchmarks](benchmarks/reproduce.sh)** | 🌐 **[Website](https://qxmcu.github.io/apex/)**
+
+---
+
+## The idea
+
+Traditional compression typically applies one primary compression strategy to an entire stream.
+
+APEX instead treats compression as a per-block optimization problem:
+
+    Input
+      │
+      ▼
+    Block analysis
+      │
+      ├── candidate transforms
+      │
+      ├── candidate compressors
+      │
+      └── deduplication
+              │
+              ▼
+       tournament selection
+              │
+              ▼
+       best pipeline/block
+              │
+              ▼
+           .apx
+
+Different blocks can therefore use different pipelines.
+
+For example:
+
+    executable → BCJ + Zstd
+    sensor data → Delta + Zstd
+    repetitive data → RLE + Brotli
+    duplicate block → deduplication reference
+    high-entropy data → stored directly
+
+## Highlights
+
+- Adaptive per-block compression
+- 11 reversible preprocessing transforms
+- Multi-engine tournament selection
+- Content-defined FastCDC deduplication
+- Reed-Solomon recovery
+- Per-block and archive-level integrity verification
+- Optional authenticated encryption
+- Versioned `.apx` container format
+- Native standalone builds
+- macOS Finder integration
 
 ---
 
@@ -50,7 +105,7 @@ Instead of forcing a single, static algorithm across heterogeneous data, Apex ex
 
 ---
 
-## The Science: Why Universal Archivers Fail
+## The Compression Problem: Heterogeneous Data
 
 In computer science and information theory, data compression is bounded by **Shannon’s Source Coding Theorem** and the **Pigeonhole Principle**:
 1. **No algorithm can compress all files losslessly**: If an archiver compressed every $N$-byte input, there would be fewer output sequences than inputs, mathematically forcing distinct inputs to collide and destroying lossless recovery.
@@ -121,7 +176,7 @@ All transforms are guaranteed **100% losslessly reversible** with verified mathe
 
 ---
 
-## Why Apex Outperforms Traditional Archivers
+## Architecture & Benchmark Results
 
 Most industry archivers were built 15 to 30 years ago around a single, fixed compression algorithm. 
 
@@ -144,6 +199,8 @@ Most industry archivers were built 15 to 30 years ago around a single, fixed com
 | **macOS Finder Quick Actions** | **YES (Compress & Extract from Context Menu)** | None | None | None | None | None | None |
 | **Open Source License** | **GPLv3 (Strong Copyleft)** | GPL | BSD | LGPL / Public Domain | BSD / GPLv2 | MIT | Proprietary |
 
+> *Comparisons represent built-in/default capabilities of the listed tools and are not intended to imply that equivalent functionality cannot be achieved through external tools, plugins, or pipelines.*
+
 ---
 
 ## ⚡ Extreme Optimizations & Parallel Core Execution
@@ -160,7 +217,7 @@ ApexCompress achieves these results—even on a budget, low-power **AMD Ryzen 3 
 
 ### Benchmark Shootout: Standard Canterbury Corpus (282 MB)
 
-Tested on the industry-standard Canterbury Corpus (scaled to 282 MB to accurately measure parallel execution scaling against standard single-threaded archivers):
+**The benchmark compares APEX's default parallel execution against the specified configurations of each competitor.**
 
 ```
 BENCHMARK SHOOTOUT (Standard Canterbury Corpus x100: 282.11 MB)
@@ -175,13 +232,30 @@ Rank  | Engine / Pipeline                           | Compressed  | Ratio   | Sa
 #6    | Gzip (Deflate -9)                           |   91.00 MB  |  3.10x  | 67.74%  |   42.57 s
 ================================================================================================
 ```
-> **Why Apex Wins**: Standard archivers process linearly on a single thread. Apex saturates all available logical cores while its Stage 1 analyzer applies domain preconditioning (Delta-1, Planar), converting structured redundancy into near-zero residuals and yielding an **18% to 25% density advantage** over standalone Zstd and Brotli in a fraction of the time.
+
+### Methodology
+
+- Dataset: Canterbury Corpus ×100
+- Input: 282.11 MB
+- APEX version: v1.0.1
+- Compression mode: Ultra (8MB blocks)
+- CPU: AMD Ryzen 3 3250U
+- Logical cores: 4 Threads
+- OS: macOS Darwin 24.6.0
+- Competitor versions: zstd 1.5.5, xz 5.4.4, brotli 1.1.0, bzip2 1.0.8, gzip 1.12
+- Thread counts: APEX (4 threads), Zstd (1 thread), XZ (1 thread)
+- Timing method: Wall-clock time (Python `time.perf_counter()`)
+- I/O included/excluded: RAM-to-RAM (I/O excluded to measure raw engine throughput)
+
+> **Where APEX wins**: APEX saturates all available logical cores while its Stage 1 analyzer applies domain preconditioning (Delta-1, Planar), converting structured redundancy into near-zero residuals and yielding an **18% to 25% density advantage** over standalone Zstd and Brotli in a fraction of the time.
 
 ---
 
 ### Benchmark Shootout: Extreme Deduplication (269 MB Repeated Corpus)
 
-Tested on the Canterbury Corpus appended to itself 100 times (269 MB) to evaluate content-aware deduplication routing on highly redundant datasets.
+Tested on the Canterbury Corpus appended to itself 100 times (269 MB). 
+
+> ⚠️ **Note:** This benchmark measures APEX's content-aware deduplication advantage, not purely its entropy-compression advantage. It is designed to evaluate content-aware deduplication routing on highly redundant datasets against standard archivers lacking deduplication.
 
 ```text
 TOURNAMENT BENCHMARK SHOOTOUT (Input: 269.0 MB)
@@ -220,10 +294,27 @@ Hardware:         macOS Darwin 24.6.0 | x86_64 AMD Ryzen 3 3250U (2 Cores / 4 Th
 | `tar -cJf (xz -6)` | 12.3 GB | 3.9 GB | 68.29% | 3.15x | 648.10s (19 MB/s) | 88.40s (139 MB/s) | CRC-64 |
 | `zstd -3` | 12.3 GB | 4.3 GB | 65.04% | 2.86x | 58.10s (211 MB/s) | 41.50s (296 MB/s) | XXH64 |
 
-> **Key Results**:
-> 1. **Massive Space Savings**: Apex beat standard Gzip by **800 MB** on the exact same dataset.
-> 2. **12x Faster Than XZ**: Apex produced near-XZ compression density in **52 seconds** compared to XZ's **10.8 minutes**.
-> 3. **Bit-Exact Assurance**: All 142,473 files, directories, POSIX permissions, and modification timestamps were verified bit-exact via stream SHA-256 validation.
+> **Important result**: APEX does not win every metric. On this dataset, XZ achieves a smaller archive, while APEX is substantially faster.
+> 
+> APEX produced a 4.0 GB archive in 52.74 seconds, while XZ produced 3.9 GB in 648.10 seconds. In other words, APEX gets close to XZ's density while approaching Zstd-like throughput. All 142,473 files, directories, POSIX permissions, and modification timestamps were verified bit-exact via stream SHA-256 validation.
+
+> **Reproduce the results**
+>
+> All benchmark results are generated by APEX's built-in benchmark command and can be independently reproduced on compatible systems.
+> You can run these exact benchmarks yourself using the automated script provided in `benchmarks/reproduce.sh`.
+
+---
+
+## Known limitations
+
+APEX is not intended to:
+
+- outperform specialized codecs on every media format;
+- make already-encrypted/random data smaller;
+- replace geographically independent backups;
+- provide cryptographic guarantees beyond those documented in SECURITY.md.
+
+Performance and compression ratio depend on dataset characteristics, hardware, and selected compression mode.
 
 ---
 
@@ -611,9 +702,9 @@ Apex archives follow a strict, forward-compatible binary specification:
 
 ## Installation & Setup
 
-### Option 1: Standalone Native Executable (Zero External Dependencies)
+### Option 1: Standalone Native Executable
 
-The standalone binary bundles the Python runtime and all required C-extensions into a single native Mach-O, ELF, or Windows executable. **Target machines do not require Python, compilers, or any external libraries installed.**
+**Standalone builds bundle their runtime and dependencies.** Target machines do not require Python, compilers, or any external libraries installed.
 
 #### Pre-Compiled Binaries:
 Download the pre-compiled standalone binary directly from [Releases](https://github.com/qxmcu/apex/releases/latest).
@@ -665,20 +756,22 @@ apex --version
 
 ---
 
-## Automated Test Suite
+## Guarantees
 
-ApexCompress includes an exhaustive automated test suite with **100% pass rate** across all 32 tests:
+### Losslessness
+Every compression and preprocessing transform used by APEX is reversible. Extraction is verified against the stored integrity data.
 
-```bash
-python3 -m unittest discover -s apex-py/tests -v
-```
+### Integrity
+APEX stores per-block integrity information and archive-level hashes. `apex test` can verify an archive without extracting it.
 
-### Test Coverage Highlights:
-- **`test_transforms.py`**: Bit-exact reversibility for Delta (1/2/4), Planar-4, RLE, ARM64 BCJ, x86 BCJ, BC1/BC7 texture swizzles, and Stride (12/16) 3D mesh filters.
-- **`test_archive.py`**: Solid archive packing, directory hierarchy recursion, single-file compression, corruption detection, and overwrite protection.
-- **`test_advanced.py`**: Cauchy Reed-Solomon erasure coding, Galois Field linear solvers, FastCDC content chunking, and BLAKE2b block deduplication.
-- **`test_security.py`**: PBKDF2 key derivation, AES-256-CTR and ChaCha20 ciphers, HMAC-SHA256 Encrypt-then-MAC authentication, wrong password rejection, and bit-flipping tampering detection.
-- **`test_cli.py`**: Full end-to-end command-line tests (`compress`, `decompress`, `test`, `list`, `info`, `benchmark`, `repair`).
+### Recovery
+Archives created with recovery enabled can reconstruct data within the documented Reed-Solomon parity limits.
+
+### Compatibility
+The `.apx` container format is strictly versioned in `docs/FORMAT.md`. We guarantee backward compatibility for extraction in all future 1.x releases.
+
+### High-entropy data
+Data that does not benefit from compression is automatically stored without deliberately expanding it beyond the documented container overhead.
 
 ---
 

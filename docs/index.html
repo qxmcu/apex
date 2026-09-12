@@ -43,7 +43,6 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    /* Strict Non-AI-Slop Architectural Styles */
     body {
       background-color: #090A0F;
       color: #EDEDEC;
@@ -95,7 +94,7 @@
         <a href="#audit" class="hover:text-brand-acid transition-colors">01 // Architectural Flaws</a>
         <a href="#engine" class="hover:text-brand-acid transition-colors">02 // The Pipeline</a>
         <a href="#benchmarks" class="hover:text-brand-acid transition-colors">03 // Verification Data</a>
-        <a href="#pricing" class="hover:text-brand-acid transition-colors">04 // Licensing</a>
+        <a href="#license" class="hover:text-brand-acid transition-colors">04 // Open Source Freedom</a>
         <a href="#install" class="hover:text-brand-acid transition-colors">05 // Binaries</a>
       </nav>
 
@@ -117,9 +116,9 @@
 
   <!-- Editorial Asymmetric Hero Section -->
   <section class="border-b border-hairline relative grid-lines">
-    <div class="max-w-[1440px] mx-auto px-6 sm:px-10 py-20 lg:py-28">
+    <div class="max-w-[1440px] mx-auto px-6 sm:px-10 py-16 sm:py-20 lg:py-24">
       
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
         
         <!-- Left Column: Typography & Intent (7 Cols) -->
         <div class="lg:col-span-7 flex flex-col justify-between">
@@ -134,13 +133,13 @@
               7-Zip dies on single-bit errors.
             </h1>
 
-            <p class="mt-8 text-lg sm:text-xl text-brand-muted max-w-2xl font-normal leading-relaxed">
+            <p class="mt-6 sm:mt-8 text-base sm:text-lg lg:text-xl text-brand-muted max-w-2xl font-normal leading-relaxed">
               ApexCompress is a deterministic container engine engineered for modern hardware. It replaces single-threaded legacy algorithms with real-time tournament chunking, sub-second FastCDC deduplication, and mathematical bit-rot self-healing.
             </p>
           </div>
 
           <!-- Asymmetric Action Block -->
-          <div class="mt-12 pt-8 border-t border-hairline flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <div class="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-hairline flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <a href="#install" 
                class="px-8 py-4 bg-brand-acid hover:bg-white text-black font-bold text-sm uppercase tracking-wider font-mono flex items-center justify-center gap-3 transition-colors">
               <i data-lucide="terminal" class="w-4 h-4"></i>
@@ -153,8 +152,8 @@
             </a>
           </div>
 
-          <!-- Cold Hard Numbers -->
-          <div class="mt-12 grid grid-cols-3 gap-6 pt-8 border-t border-hairline font-mono">
+          <!-- Cold Hard Numbers (Responsive Stack) -->
+          <div class="mt-8 sm:mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6 sm:pt-8 border-t border-hairline font-mono">
             <div>
               <div class="text-xs text-brand-muted uppercase">Ryzen 3 Speed</div>
               <div class="text-2xl lg:text-3xl font-bold text-white mt-1">115.6 MB/s</div>
@@ -175,10 +174,10 @@
         </div>
 
         <!-- Right Column: Live Telemetry / System Inspector (5 Cols) -->
-        <div class="lg:col-span-5 bg-brand-panel border border-brand-border rounded-none shadow-2xl p-6 lg:p-8 font-mono">
+        <div class="lg:col-span-5 bg-brand-panel border border-brand-border rounded-none shadow-2xl p-6 lg:p-7 font-mono">
           
           <div class="flex items-center justify-between pb-4 border-b border-brand-border text-xs text-brand-muted">
-            <span class="flex items-center gap-2 text-white">
+            <span class="flex items-center gap-2 text-white font-bold">
               <span class="w-2 h-2 rounded-full bg-brand-acid"></span>
               APEX PIPELINE TELEMETRY
             </span>
@@ -186,7 +185,7 @@
           </div>
 
           <!-- Mode Selector (Interactive State) -->
-          <div class="mt-6">
+          <div class="mt-5">
             <div class="text-[11px] uppercase tracking-wider text-brand-muted mb-2">Select Execution Preset:</div>
             <div class="grid grid-cols-3 gap-2">
               <button onclick="setInspectorMode('fast')" id="btn-fast" 
@@ -205,7 +204,7 @@
           </div>
 
           <!-- Dynamic Output Card -->
-          <div class="mt-6 p-4 bg-[#090A0F] border border-brand-border text-xs space-y-3">
+          <div class="mt-5 p-4 bg-[#090A0F] border border-brand-border text-xs space-y-2.5">
             <div class="flex justify-between border-b border-hairline pb-2">
               <span class="text-brand-muted">Active Algorithm:</span>
               <span id="inspect-algo" class="text-brand-acid font-bold">FastCDC + Zstd-1 Fast Track</span>
@@ -229,12 +228,12 @@
           </div>
 
           <!-- Hex Stream Visualizer -->
-          <div class="mt-6">
+          <div class="mt-5">
             <div class="text-[11px] uppercase tracking-wider text-brand-muted mb-2 flex justify-between">
               <span>Container Header Layout (.apx):</span>
               <span class="text-brand-acid">MAGIC 0x41505831</span>
             </div>
-            <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-muted overflow-x-auto custom-scrollbar font-mono leading-relaxed">
+            <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-muted overflow-x-auto custom-scrollbar font-mono leading-relaxed max-w-full">
 00000000  41 50 58 31 01 04 00 00  00 00 20 00 1a 4f b2 c9  |APX1...... ..O..|
 00000010  00 00 00 02 00 00 00 14  70 61 74 68 2f 74 6f 2f  |........path/to/|
 00000020  64 61 74 61 2e 62 69 6e  64 65 64 75 70 3a 31 32  |data.bindedup:12|
@@ -254,10 +253,10 @@
   </section>
 
   <!-- Section 01: Architectural Audit of WinRAR, 7-Zip, WinZip -->
-  <section id="audit" class="border-b border-hairline py-20 bg-[#090A0F]">
+  <section id="audit" class="border-b border-hairline py-16 sm:py-20 bg-[#090A0F]">
     <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
       
-      <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-8 border-b border-hairline gap-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 sm:pb-8 border-b border-hairline gap-6">
         <div>
           <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">01 // THE PROBLEM STATEMENT</span>
           <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">Architectural Flaws in Legacy Tools</h2>
@@ -267,7 +266,7 @@
         </p>
       </div>
 
-      <!-- High-Density Comparison Table (Editorial, Structural) -->
+      <!-- High-Density Comparison Table -->
       <div class="border border-brand-border overflow-x-auto custom-scrollbar">
         <table class="w-full text-left font-mono text-xs border-collapse">
           <thead>
@@ -313,7 +312,7 @@
               <td class="p-4 border-r border-brand-border">Closed-source commercial nagware ($29)</td>
               <td class="p-4 border-r border-brand-border">LGPL / Open Source</td>
               <td class="p-4 border-r border-brand-border">Proprietary paid subscription ($34.95/yr)</td>
-              <td class="p-4 bg-brand-subtle text-brand-acid font-bold">100% Open Source GPLv3 + Standalone Binary</td>
+              <td class="p-4 bg-brand-subtle text-brand-acid font-bold">100% Free GNU GPLv3 + Standalone Binary</td>
             </tr>
           </tbody>
         </table>
@@ -323,10 +322,10 @@
   </section>
 
   <!-- Section 02: The Deep Pipeline (Engine Breakdown) -->
-  <section id="engine" class="border-b border-hairline py-20 bg-brand-panel">
+  <section id="engine" class="border-b border-hairline py-16 sm:py-20 bg-brand-panel">
     <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
       
-      <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-8 border-b border-hairline gap-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 sm:pb-8 border-b border-hairline gap-6">
         <div>
           <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">02 // MATHEMATICAL FOUNDATIONS</span>
           <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">The Apex Architecture</h2>
@@ -339,85 +338,85 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-brand-border border border-brand-border">
         
         <!-- Stage 1 -->
-        <div class="bg-[#090A0F] p-8 flex flex-col justify-between">
+        <div class="bg-[#090A0F] p-6 sm:p-8 flex flex-col justify-between">
           <div>
-            <div class="font-mono text-xs text-brand-acid mb-4">01 // PRECONDITIONING</div>
+            <div class="font-mono text-xs text-brand-acid mb-3">01 // PRECONDITIONING</div>
             <h3 class="text-xl font-bold text-white uppercase">11 Reversible Filters</h3>
             <p class="mt-3 text-sm text-brand-muted leading-relaxed">
               Standard engines fail on binaries and textures because byte entropy is too chaotic. Apex analyzes incoming streams and applies reversible Delta, Planar, or BCJ machine-code filters to artificially collapse Shannon entropy before compression starts.
             </p>
           </div>
-          <div class="mt-8 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
+          <div class="mt-6 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
             Entropy reduction: up to 48.2% on structured data
           </div>
         </div>
 
         <!-- Stage 2 -->
-        <div class="bg-[#090A0F] p-8 flex flex-col justify-between">
+        <div class="bg-[#090A0F] p-6 sm:p-8 flex flex-col justify-between">
           <div>
-            <div class="font-mono text-xs text-brand-acid mb-4">02 // CHUNKING & DEDUP</div>
+            <div class="font-mono text-xs text-brand-acid mb-3">02 // CHUNKING & DEDUP</div>
             <h3 class="text-xl font-bold text-white uppercase">FastCDC Boundary Slicing</h3>
             <p class="mt-3 text-sm text-brand-muted leading-relaxed">
               Fixed-size blocks desynchronize when a single byte is prepended. Apex uses Content-Defined Chunking (FastCDC) to detect rolling hash cut-points, computing 128-bit BLAKE2b fingerprints to eliminate identical blocks in microseconds.
             </p>
           </div>
-          <div class="mt-8 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
+          <div class="mt-6 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
             Eliminates repeated builds & server logs in O(1)
           </div>
         </div>
 
         <!-- Stage 3 -->
-        <div class="bg-[#090A0F] p-8 flex flex-col justify-between">
+        <div class="bg-[#090A0F] p-6 sm:p-8 flex flex-col justify-between">
           <div>
-            <div class="font-mono text-xs text-brand-acid mb-4">03 // TOURNAMENT ENGINE</div>
+            <div class="font-mono text-xs text-brand-acid mb-3">03 // TOURNAMENT ENGINE</div>
             <h3 class="text-xl font-bold text-white uppercase">Adaptive Core Heats</h3>
             <p class="mt-3 text-sm text-brand-muted leading-relaxed">
               Instead of blindly applying LZMA to everything, Apex runs qualification heats across candidate engines (Zstandard, Brotli, LZMA, Deflate) on worker threads. The champion algorithm for that specific block wins the container payload.
             </p>
           </div>
-          <div class="mt-8 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
+          <div class="mt-6 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
             Zero thread stalls &bull; Sticky momentum scoring
           </div>
         </div>
 
         <!-- Stage 4 -->
-        <div class="bg-[#090A0F] p-8 flex flex-col justify-between">
+        <div class="bg-[#090A0F] p-6 sm:p-8 flex flex-col justify-between">
           <div>
-            <div class="font-mono text-xs text-brand-acid mb-4">04 // DURABILITY</div>
+            <div class="font-mono text-xs text-brand-acid mb-3">04 // DURABILITY</div>
             <h3 class="text-xl font-bold text-white uppercase">Reed-Solomon Parity</h3>
             <p class="mt-3 text-sm text-brand-muted leading-relaxed">
               Archives put in cold storage inevitably face storage bit-rot. Apex bakes Cauchy Reed-Solomon erasure coding directly into the block headers, enabling automatic mathematical recovery of damaged or corrupted sectors during extraction.
             </p>
           </div>
-          <div class="mt-8 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
+          <div class="mt-6 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
             Survives physical drive sector decay
           </div>
         </div>
 
         <!-- Stage 5 -->
-        <div class="bg-[#090A0F] p-8 flex flex-col justify-between">
+        <div class="bg-[#090A0F] p-6 sm:p-8 flex flex-col justify-between">
           <div>
-            <div class="font-mono text-xs text-brand-acid mb-4">05 // CRYPTOGRAPHY</div>
+            <div class="font-mono text-xs text-brand-acid mb-3">05 // CRYPTOGRAPHY</div>
             <h3 class="text-xl font-bold text-white uppercase">Authenticated AES-256</h3>
             <p class="mt-3 text-sm text-brand-muted leading-relaxed">
               Zero dependency on external OpenSSL libraries. Payloads are encrypted with hardware-accelerated AES-256-CTR and authenticated with an Encrypt-then-MAC HMAC-SHA256 digest derived via 100,000 rounds of PBKDF2.
             </p>
           </div>
-          <div class="mt-8 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
+          <div class="mt-6 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
             Tamper-proof container verification
           </div>
         </div>
 
         <!-- Stage 6 -->
-        <div class="bg-[#090A0F] p-8 flex flex-col justify-between">
+        <div class="bg-[#090A0F] p-6 sm:p-8 flex flex-col justify-between">
           <div>
-            <div class="font-mono text-xs text-brand-acid mb-4">06 // ZERO-COPY KERNEL</div>
+            <div class="font-mono text-xs text-brand-acid mb-3">06 // ZERO-COPY KERNEL</div>
             <h3 class="text-xl font-bold text-white uppercase">Memory-Mapped I/O</h3>
             <p class="mt-3 text-sm text-brand-muted leading-relaxed">
               Apex completely avoids copying payloads through user-space Python buffers. Large files are memory-mapped directly into kernel address space, keeping peak working memory under 30MB even when processing 100GB datasets.
             </p>
           </div>
-          <div class="mt-8 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
+          <div class="mt-6 pt-4 border-t border-hairline font-mono text-[11px] text-brand-muted">
             Tested on 80GB mixed datasets without swap
           </div>
         </div>
@@ -428,10 +427,10 @@
   </section>
 
   <!-- Section 03: Verification Benchmarks -->
-  <section id="benchmarks" class="border-b border-hairline py-20 bg-[#090A0F]">
+  <section id="benchmarks" class="border-b border-hairline py-16 sm:py-20 bg-[#090A0F]">
     <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
       
-      <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-8 border-b border-hairline gap-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 sm:pb-8 border-b border-hairline gap-6">
         <div>
           <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">03 // HARD VERIFICATION DATA</span>
           <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">Shootout on Budget Hardware</h2>
@@ -450,7 +449,7 @@
             <span>METRIC: TIME VS COMPRESSED SIZE</span>
           </div>
 
-          <div class="mt-6 space-y-6">
+          <div class="mt-6 space-y-5">
             
             <!-- Item 1: Apex Fast -->
             <div>
@@ -548,114 +547,80 @@
     </div>
   </section>
 
-  <!-- Section 04: Authentic Licensing & Pricing -->
-  <section id="pricing" class="border-b border-hairline py-20 bg-brand-panel">
+  <!-- Section 04: 100% Free & Open Source Freedom (No Dual-Pricing) -->
+  <section id="license" class="border-b border-hairline py-16 sm:py-20 bg-brand-panel">
     <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
       
-      <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-8 border-b border-hairline gap-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 sm:pb-8 border-b border-hairline gap-6">
         <div>
-          <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">04 // TRANSPARENT LICENSING</span>
-          <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">No Nagware. No Subscriptions.</h2>
+          <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">04 // OPEN SOURCE & FREEDOM</span>
+          <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">100% Free. GNU GPLv3 Licensed.</h2>
         </div>
         <p class="text-sm text-brand-muted max-w-md font-mono">
-          ApexCompress is free and open-source under GNU GPLv3. Commercial embedded dual-licensing available for proprietary software vendors.
+          No nagware screens. No subscription paywalls. No closed tiers. ApexCompress is free and open-source software forever.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <!-- Single Commanding Open Source Commitment Block -->
+      <div class="border border-brand-border bg-[#090A0F] p-8 sm:p-12 max-w-5xl mx-auto font-mono">
         
-        <!-- Tier 1: Community Open Source -->
-        <div class="border border-brand-border bg-[#090A0F] p-8 flex flex-col justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-brand-border">
           <div>
-            <div class="flex justify-between items-start font-mono">
-              <span class="text-xs uppercase text-brand-acid font-bold tracking-wider">COMMUNITY & DEV</span>
-              <span class="px-2 py-0.5 text-[10px] bg-brand-subtle text-brand-muted border border-brand-border">GPLv3</span>
-            </div>
-            
-            <div class="mt-4 flex items-baseline gap-2">
-              <span class="text-5xl font-bold text-white">$0</span>
-              <span class="font-mono text-xs text-brand-muted uppercase">/ Forever Free</span>
-            </div>
-            
-            <p class="mt-4 text-sm text-brand-muted leading-relaxed">
-              Full access to the standalone native CLI binary, all 11 preconditioners, FastCDC deduplication, and Reed-Solomon self-healing.
-            </p>
-
-            <ul class="mt-8 space-y-3 font-mono text-xs text-gray-300">
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
-                <span>All compression presets (Fast, Balanced, Ultra)</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
-                <span>Precompiled binaries for macOS, Linux, Windows</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
-                <span>FastCDC deduplication & self-healing parity</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
-                <span>Authenticated AES-256-CTR encryption</span>
-              </li>
-              <li class="flex items-center gap-2 text-brand-muted">
-                <i data-lucide="info" class="w-4 h-4"></i>
-                <span>Commercial SaaS use permitted; client redistribution requires GPLv3</span>
-              </li>
-            </ul>
+            <span class="text-xs uppercase text-brand-acid font-bold tracking-wider">PROJECT ETHOS</span>
+            <h3 class="text-2xl font-bold text-white mt-1 uppercase">Universal Computational Freedom</h3>
           </div>
-
-          <a href="#install" 
-             class="mt-10 block text-center py-3 px-4 bg-brand-subtle hover:bg-brand-border border border-brand-border text-white font-mono text-xs uppercase tracking-wider transition-colors">
-            Get Community Binary
-          </a>
+          <div class="px-3 py-1 bg-brand-subtle border border-brand-border text-xs text-brand-acid inline-flex items-center gap-2">
+            <i data-lucide="unlock" class="w-3.5 h-3.5"></i>
+            <span>GNU GENERAL PUBLIC LICENSE v3.0</span>
+          </div>
         </div>
 
-        <!-- Tier 2: Commercial OEM Dual License -->
-        <div class="border border-brand-acid bg-[#090A0F] p-8 flex flex-col justify-between relative">
-          <div class="absolute -top-3 right-6 px-2.5 py-0.5 bg-brand-acid text-black font-mono text-[10px] font-bold uppercase tracking-wider">
-            COMMERCIAL EMBED
-          </div>
-
-          <div>
-            <div class="flex justify-between items-start font-mono">
-              <span class="text-xs uppercase text-brand-acid font-bold tracking-wider">PROPRIETARY OEM DUAL-LICENSE</span>
-              <span class="px-2 py-0.5 text-[10px] bg-brand-acid/20 text-brand-acid border border-brand-acid/40">COMMERCIAL</span>
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
+          
+          <div class="p-5 bg-brand-panel border border-brand-border space-y-3">
+            <div class="text-white font-bold uppercase flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
+              <span>Free for Commercial Use</span>
             </div>
-            
-            <div class="mt-4 flex items-baseline gap-2">
-              <span class="text-5xl font-bold text-white">Custom</span>
-              <span class="font-mono text-xs text-brand-muted uppercase">/ Inquire</span>
-            </div>
-            
-            <p class="mt-4 text-sm text-brand-muted leading-relaxed">
-              Designed for backup software vendors, game engine publishers, and database vendors who need to embed ApexCompress into closed-source commercial software without GPLv3 reciprocity.
+            <p class="text-brand-muted leading-relaxed">
+              Use ApexCompress inside your company, on your production servers, or in commercial backup pipelines without paying a single cent.
             </p>
-
-            <ul class="mt-8 space-y-3 font-mono text-xs text-gray-300">
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
-                <span>Proprietary closed-source embedding waiver</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
-                <span>Direct C/Rust static & dynamic library bindings</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
-                <span>Custom domain preconditioning filter engineering</span>
-              </li>
-              <li class="flex items-center gap-2">
-                <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
-                <span>Priority CVE security escalation & SLA support</span>
-              </li>
-            </ul>
           </div>
 
-          <a href="https://github.com/qxmcu/apex/issues" target="_blank"
-             class="mt-10 block text-center py-3 px-4 bg-brand-acid hover:bg-white text-black font-mono text-xs font-bold uppercase tracking-wider transition-colors">
-            Contact for Dual-License
-          </a>
+          <div class="p-5 bg-brand-panel border border-brand-border space-y-3">
+            <div class="text-white font-bold uppercase flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
+              <span>Zero Telemetry or Spying</span>
+            </div>
+            <p class="text-brand-muted leading-relaxed">
+              No tracking, no analytics pinging home, and zero phone-home licensing checks. Runs completely air-gapped on isolated nodes.
+            </p>
+          </div>
+
+          <div class="p-5 bg-brand-panel border border-brand-border space-y-3">
+            <div class="text-white font-bold uppercase flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-brand-acid"></i>
+              <span>Anti-Proprietary Forks</span>
+            </div>
+            <p class="text-brand-muted leading-relaxed">
+              GPLv3 ensures that if anyone forks or enhances the engine, their changes must remain open-source for the entire community forever.
+            </p>
+          </div>
+
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-brand-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+          <span class="text-brand-muted">Read the official legal notice and copyright terms:</span>
+          <div class="flex items-center gap-4">
+            <a href="https://github.com/qxmcu/apex/blob/main/LICENSE" target="_blank" 
+               class="px-4 py-2 bg-brand-subtle hover:bg-brand-border border border-brand-border text-white transition-colors uppercase font-bold">
+              View LICENSE (GPLv3)
+            </a>
+            <a href="https://github.com/qxmcu/apex" target="_blank" 
+               class="px-4 py-2 bg-brand-acid hover:bg-white text-black font-bold transition-colors uppercase">
+              Inspect Source on GitHub
+            </a>
+          </div>
         </div>
 
       </div>
@@ -664,10 +629,10 @@
   </section>
 
   <!-- Section 05: Installation & Binary Downloads -->
-  <section id="install" class="py-20 bg-[#090A0F]">
+  <section id="install" class="py-16 sm:py-20 bg-[#090A0F]">
     <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
       
-      <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 pb-8 border-b border-hairline gap-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 sm:pb-8 border-b border-hairline gap-6">
         <div>
           <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">05 // STANDALONE DEPLOYMENT</span>
           <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">Native Executables</h2>
@@ -749,7 +714,7 @@ python -m apex benchmark test.dat</pre>
   </section>
 
   <!-- Complete Structural Engineering Footer -->
-  <footer class="border-t border-hairline bg-[#07080B] py-16 text-brand-muted font-mono text-xs">
+  <footer class="border-t border-hairline bg-[#07080B] py-14 text-brand-muted font-mono text-xs">
     <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
       
       <div class="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-hairline">
@@ -805,7 +770,7 @@ python -m apex benchmark test.dat</pre>
       </div>
 
       <div class="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px]">
-        <div>&copy; 2026 ApexCompress Project. All rights reserved. Licensed under GPLv3.</div>
+        <div>&copy; 2026 ApexCompress Project. 100% Free Software under GNU GPLv3.</div>
         <div class="flex items-center gap-6">
           <a href="https://github.com/qxmcu/apex" class="hover:text-white transition-colors">GitHub</a>
           <a href="https://github.com/qxmcu/apex/releases" class="hover:text-white transition-colors">Releases</a>

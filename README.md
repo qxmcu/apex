@@ -65,7 +65,7 @@ In computer science and information theory, data compression is bounded by **Sha
 
 ### The 3-Stage Tournament Funnel
 
-Rather than gambling on one algorithm for an entire multi-gigabyte stream, Apex divides streams into configurable blocks (default: 2 MB; supports 1 MB, 4 MB, 8 MB, 16 MB) and executes a **hierarchical 3-stage qualifier tournament**:
+Rather than gambling on one algorithm for an entire multi-gigabyte stream, Apex divides streams into dynamically sized, content-aware blocks (2 MB, 4 MB, or 8 MB depending on your preset) and executes a **hierarchical 3-stage qualifier tournament**:
 
 ```
 Raw Input Block (e.g. 2 MB)
@@ -90,7 +90,7 @@ Raw Input Block (e.g. 2 MB)
            ▼
 ┌────────────────────────────────────────────────────────┐
 │  STAGE 3: The Finals                                   │
-│  - Compresses the full 2 MB block with Top 2 finalists │
+│  - Compresses the full block with Top 2 finalists      │
 │  - Crown the Winner (Maximum Byte Reduction)           │
 └────────────────────────────────────────────────────────┘
            │ Winner
@@ -132,7 +132,7 @@ Most industry archivers were built 15 to 30 years ago around a single, fixed com
 | Capability | **ApexCompress (`apex`)** | **Gzip / Tar** | **Bzip2** | **XZ / 7-Zip** | **Zstandard (`zstd`)** | **Brotli** | **RAR** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Engine Selection** | **Dynamic Multi-Engine Tournament** | Static (Deflate) | Static (BWT) | Static (LZMA/LZMA2)| Static (FSE + LZ77) | Static (Lz77 + Huffman)| Static (Proprietary LZ) |
-| **Adaptive Block Sizing** | **YES (Dynamic 2MB / 4MB Blocks)** | NO | NO | NO | NO | NO | NO |
+| **Adaptive Block Sizing** | **YES (Dynamic 2MB / 4MB / 8MB)** | NO | NO | NO | NO | NO | NO |
 | **Parallel Multi-Core Execution**| **YES (Native Lock-Free Pools)** | NO (Needs `pigz`) | NO (Needs `pbzip2`) | YES | YES | NO | YES |
 | **Domain Preconditioning** | **YES (11 Transforms: Delta, Planar, BCJ, RLE, Textures, Meshes)** | None | None | Partial (x86 BCJ in 7z) | None | None | Partial (Audio/RGB filters) |
 | **Self-Healing Parity** | **YES (Cauchy Reed-Solomon $GF(2^8)$ MDS)** | None built-in (needs `par2`) | None built-in (needs `par2`) | None built-in (needs `par2`) | None built-in | None built-in | Optional (`.rev` parity volumes) |
@@ -153,7 +153,7 @@ ApexCompress achieves these results—even on a budget, low-power **AMD Ryzen 3 
 - **Zero-Copy Memory Mapping**: Uses `mmap` for instant, zero-copy file streaming, bypassing OS page cache overhead for massive files.
 - **FastCDC Content-Defined Chunking**: Breaks data streams into dynamic chunks using rolling hashes, instantly aligning byte-boundaries for deduplication.
 - **Microsecond Fingerprinting**: Fuses CRC-32 and 128-bit BLAKE2b edge sampling to identify deduplication targets in under 1 microsecond per block.
-- **Adaptive Block Sizing**: Scales chunk windows dynamically. `fast` mode defaults to **4 MB** blocks for wider deduplication matches, while `balanced` and `ultra` use **2 MB** blocks for optimal CPU L3 cache fit.
+- **Adaptive Block Sizing**: Scales chunk windows dynamically. `fast` mode uses **4 MB** blocks for wider deduplication matches, `balanced` defaults to **2 MB** for optimal CPU L3 cache fit, and `ultra` scales to **8 MB** to maximize compression dictionary windows.
 
 ---
 

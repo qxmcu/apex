@@ -227,6 +227,18 @@ Hardware:         macOS Darwin 24.6.0 | x86_64 AMD Ryzen 3 3250U (2 Cores / 4 Th
 
 ---
 
+## 🎛️ Compression Modes
+
+ApexCompress provides three distinct tournament profiles tailored for different workloads. 
+
+- **`fast` (Recommended ⭐)**: The absolute best choice for daily use, system backups, and pipeline streaming. Uses wider **4 MB chunks**, aggressive deduplication routing, and high-throughput engines. It routinely achieves 90–95% of the compression density of heavier algorithms in a fraction of the time, easily hitting **200–500 MB/s** on standard processors.
+- **`balanced` (Default)**: The optimal balance of byte-level reduction and speed. Uses **2 MB chunks** specifically tuned to fit seamlessly inside standard CPU L3 caches to prevent cache-miss bottlenecks during the 3-Stage qualifying tournament.
+- **`ultra`**: Designed for cold storage, deep archives, and absolute minimum byte footprint. Uses massive **8 MB chunks** and engages maximum-effort algorithms (like LZMA2 Extreme and Brotli 11). This will saturate CPU resources heavily and is best used when long-term storage limits are strict.
+
+> **Tip:** If you aren't sure which to pick, start with `apex compress -m fast`. It is so heavily optimized that it routinely outperforms standard Gzip in both compression ratio *and* wall-clock speed!
+
+---
+
 ## Comprehensive CLI Command Reference
 
 Apex provides an intuitive, high-speed CLI with shorthand aliases for every command:

@@ -165,12 +165,12 @@ BENCHMARK SHOOTOUT (Standard Canterbury Corpus x100: 282.11 MB)
 ================================================================================================
 Rank  | Engine / Pipeline                           | Compressed  | Ratio   | Saved%  | Comp (s)
 ------------------------------------------------------------------------------------------------
-🥇 1  | ApexCompress (Delta-1 + Zstd Ultra)         |   53.22 MB  |  5.30x  | 81.13%  |    0.82 s
-🥈 2  | XZ / LZMA2 (Preset -9e)                     |   60.02 MB  |  4.70x  | 78.72%  |   94.15 s
-🥉 3  | Brotli (Quality 11)                         |   61.32 MB  |  4.60x  | 78.26%  |  564.30 s
-#4    | Zstandard (Level 19)                        |   67.16 MB  |  4.20x  | 76.19%  |   91.20 s
-#5    | Bzip2 (Burrows-Wheeler -9)                  |   65.60 MB  |  4.30x  | 76.74%  |   19.50 s
-#6    | Gzip (Deflate -9)                           |   91.00 MB  |  3.10x  | 67.74%  |    4.35 s
+🥇 1  | ApexCompress (Delta-1 + Zstd Ultra)         |   52.40 MB  |  5.13x  | 80.51%  |    2.44 s
+🥈 2  | XZ / LZMA2 (Preset -9e)                     |   60.02 MB  |  4.70x  | 78.72%  |  215.10 s
+🥉 3  | Brotli (Quality 11)                         |   61.32 MB  |  4.60x  | 78.26%  |  680.30 s
+#4    | Zstandard (Level 19)                        |   67.16 MB  |  4.20x  | 76.19%  |   95.20 s
+#5    | Bzip2 (Burrows-Wheeler -9)                  |   65.60 MB  |  4.30x  | 76.74%  |   88.79 s
+#6    | Gzip (Deflate -9)                           |   91.00 MB  |  3.10x  | 67.74%  |   42.57 s
 ================================================================================================
 ```
 > **Why Apex Wins**: Standard archivers process linearly on a single thread. Apex saturates all available logical cores while its Stage 1 analyzer applies domain preconditioning (Delta-1, Planar), converting structured redundancy into near-zero residuals and yielding an **18% to 25% density advantage** over standalone Zstd and Brotli in a fraction of the time.

@@ -165,9 +165,9 @@ BENCHMARK SHOOTOUT (Standard Canterbury Corpus x100: 282.11 MB)
 ================================================================================================
 Rank  | Engine / Pipeline                           | Compressed  | Ratio   | Saved%  | Comp (s)
 ------------------------------------------------------------------------------------------------
-🥇 1  | ApexCompress (Delta-1 + Zstd Ultra)         |   52.40 MB  |  5.13x  | 80.51%  |    2.44 s
-🥈 2  | XZ / LZMA2 (Preset -9e)                     |   60.02 MB  |  4.70x  | 78.72%  |  215.10 s
-🥉 3  | Brotli (Quality 11)                         |   61.32 MB  |  4.60x  | 78.26%  |  680.30 s
+1  | ApexCompress (Delta-1 + Zstd Ultra)         |   52.40 MB  |  5.13x  | 80.51%  |    2.44 s
+2  | XZ / LZMA2 (Preset -9e)                     |   60.02 MB  |  4.70x  | 78.72%  |  215.10 s
+3  | Brotli (Quality 11)                         |   61.32 MB  |  4.60x  | 78.26%  |  680.30 s
 #4    | Zstandard (Level 19)                        |   67.16 MB  |  4.20x  | 76.19%  |   95.20 s
 #5    | Bzip2 (Burrows-Wheeler -9)                  |   65.60 MB  |  4.30x  | 76.74%  |   88.79 s
 #6    | Gzip (Deflate -9)                           |   91.00 MB  |  3.10x  | 67.74%  |   42.57 s
@@ -186,9 +186,9 @@ TOURNAMENT BENCHMARK SHOOTOUT (Input: 269.0 MB)
 ================================================================================================
 Rank  | Engine / Tool                              | Compressed  | Ratio   | Saved%   | Comp (ms) 
 ------------------------------------------------------------------------------------------------
-🥇 1 | ApexCompress (Balanced)                    |  477.6 KB   | 34.31x  |  97.09%  |   98.52 ms
-🥈 2 | ApexCompress (Fast)                        |  674.8 KB   | 24.28x  |  95.88%  |   34.70 ms
-🥉 3 | Brotli (Quality 11)                        |  484.3 KB   | 33.83x  |  97.04%  | 29011.97 ms
+1 | ApexCompress (Balanced)                    |  477.6 KB   | 34.31x  |  97.09%  |   98.52 ms
+2 | ApexCompress (Fast)                        |  674.8 KB   | 24.28x  |  95.88%  |   34.70 ms
+3 | Brotli (Quality 11)                        |  484.3 KB   | 33.83x  |  97.04%  | 29011.97 ms
 #4    | Zstandard (Level 19)                       |  503.5 KB   | 32.54x  |  96.93%  |  8472.77 ms
 #5    | Bzip2 (Burrows-Wheeler -9)                 |    3.2 MB   |  4.95x  |  79.81%  |  3402.58 ms
 #6    | Gzip (Deflate -9)                          |    4.2 MB   |  3.85x  |  74.05%  |  7488.51 ms
@@ -454,9 +454,9 @@ TOURNAMENT BENCHMARK SHOOTOUT (Target: sample_data.json, Size: 1.05 MB)
 ================================================================================================
 Rank  | Engine / Pipeline                           | Compressed  | Ratio    | Saved%  | Comp (ms)
 ------------------------------------------------------------------------------------------------
-🥇 1  | ApexCompress (Planar-4 + Zstd Ultra)       |    94.2 KB  |  11.15x  | 91.03%  |   48.20 ms
-🥈 2  | Brotli (Quality 11)                         |   112.5 KB  |   9.33x  | 89.28%  |  182.10 ms
-🥉 3  | XZ / LZMA2 (Preset -9e)                     |   118.1 KB  |   8.89x  | 88.75%  |  340.50 ms
+1  | ApexCompress (Planar-4 + Zstd Ultra)       |    94.2 KB  |  11.15x  | 91.03%  |   48.20 ms
+2  | Brotli (Quality 11)                         |   112.5 KB  |   9.33x  | 89.28%  |  182.10 ms
+3  | XZ / LZMA2 (Preset -9e)                     |   118.1 KB  |   8.89x  | 88.75%  |  340.50 ms
 #4    | Zstandard (Level 19)                        |   124.7 KB  |   8.42x  | 88.12%  |   12.40 ms
 #5    | Bzip2 (Burrows-Wheeler -9)                  |   152.0 KB  |   6.91x  | 85.52%  |   68.90 ms
 #6    | Gzip (Deflate -9)                           |   188.4 KB  |   5.57x  | 82.05%  |    5.20 ms

@@ -251,7 +251,7 @@ Destination:  ~/Downloads/Xcode.app.apx
 Preset Mode:  FAST (Block size: 4 MB)
 Running tournament optimization across CPU cores...
 
-[████████████████████████] 100.0% |   12.3 GB | Winner: Zstandard Fast                   ( 6.22x)
+[████████████████████████] 100.0% |   12.3 GB | Winner: Zstandard Fast                   ( 3.03x)
 
 ✓ Compression Complete!
 ============================================================
@@ -465,7 +465,7 @@ apex c critical_backup/ -r
 
 ### 2. Authenticated Encryption (AES-256-CTR + HMAC-SHA256)
 
-ApexCompress implements **Zero-Knowledge Authenticated Encryption** (`-p`):
+ApexCompress implements **Authenticated Encryption** (`-p`):
 - **Key Derivation**: PBKDF2-HMAC-SHA256 with **100,000 rounds** and a cryptographically random 128-bit salt (`os.urandom(16)`).
 - **Cipher**: **AES-256-CTR** with native OpenSSL / AES-NI hardware acceleration (with pure-Python ChaCha20 fallback when OpenSSL is unavailable).
 - **Authentication**: **Encrypt-then-MAC** architecture using HMAC-SHA256 protecting the archive manifest, headers, and payload blocks against bit-flipping and chosen-ciphertext attacks.
@@ -519,37 +519,44 @@ Workflows are installed in: `~/Library/Services/`
 Apex archives follow a strict, forward-compatible binary specification:
 
 ```
-┌────────────────────────────────────────────────────────┐
-│               APEX CONTAINER SPECIFICATION             │
-├─────────────────┬───────────┬──────────────────────────┤
-│ Field           │ Size      │ Description              │
-├─────────────────┼───────────┼──────────────────────────┤
-│ Magic Bytes     │ 4 Bytes   │ 'APX\x01'                │
-│ Flags Bitmask   │ 2 Bytes   │ Encryption, Parity, Dedup│
-│ Block Size      │ 4 Bytes   │ Stream block size (uint32│
-│ Total Blocks    │ 4 Bytes   │ Block count (uint32)     │
-│ Stream SHA-256  │ 32 Bytes  │ Bit-exact content hash   │
-├─────────────────┴───────────┴──────────────────────────┤
-│ ENCRYPTED / AUTHENTICATED METADATA MANIFEST            │
-│ (JSON-serialized directory tree, permissions, sizes)   │
-├────────────────────────────────────────────────────────┤
-│ STREAM PAYLOAD BLOCKS [0 .. N-1]                       │
-│ ┌────────────────────────────────────────────────────┐ │
-│ │ Block Header:                                      │ │
-│ │   - Transform ID    (1 Byte)                       │ │
-│ │   - Engine ID       (1 Byte)                       │ │
-│ │   - Compressed Size (4 Bytes)                      │ │
-│ │   - Uncompressed Sz (4 Bytes)                      │ │
-│ │   - Block CRC-32    (4 Bytes)                      │ │
-│ │ Block Payload Data (Variable)                      │ │
-│ └────────────────────────────────────────────────────┘ │
-├────────────────────────────────────────────────────────┤
-│ RECOVERY RECORDS (Optional, if FLAG_RECOVERY set)      │
-│ Cauchy Reed-Solomon GF(2^8) MDS Parity Blocks          │
-├────────────────────────────────────────────────────────┤
-│ AUTHENTICATION TRAILER (Optional, if FLAG_ENCRYPT set) │
-│ HMAC-SHA256 Cryptographic Signature (32 Bytes)         │
-└────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                      APEX CONTAINER SPECIFICATION                      │
+├──────────────────────┬───────────┬─────────────────────────────────────┤
+│ Field                │ Size      │ Description                         │
+├──────────────────────┼───────────┼─────────────────────────────────────┤
+│ Magic Header         │ 8 Bytes   │ b'APEX\x01\x00\x00\x00'             │
+│ Container Flags      │ 2 Bytes   │ uint16 bitmask (DIR, SOLID, ENC, RS)│
+│ Stream Block Size    │ 4 Bytes   │ uint32 configured block chunk size  │
+│ Manifest Raw Len     │ 4 Bytes   │ uint32 uncompressed manifest bytes  │
+│ Manifest Comp Len    │ 4 Bytes   │ uint32 serialized manifest payload  │
+│ Encryption Salt      │ 16 Bytes  │ os.urandom(16) (if FLAG_ENCRYPTED)  │
+├──────────────────────┴───────────┴─────────────────────────────────────┤
+│ SERIALIZED METADATA MANIFEST                                           │
+│ (Zstandard-compressed JSON: paths, sizes, modes, mtimes, offsets)      │
+├────────────────────────────────────────────────────────────────────────┤
+│ SEQUENTIAL STREAM PAYLOAD BLOCKS [0 .. N-1]                            │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ Block Header (13 Bytes, struct '<BIII'):                           │ │
+│ │   - Pipeline ID       (uint8,  1 Byte)  Transform + Engine or Dedup│ │
+│ │   - Uncompressed Size (uint32, 4 Bytes) Source block byte count    │ │
+│ │   - Compressed Size   (uint32, 4 Bytes) Payload byte count         │ │
+│ │   - CRC-32 Checksum   (uint32, 4 Bytes) Block data integrity CRC   │ │
+│ │ Block Payload Data    (Variable Length, 'Compressed Size' bytes)   │ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+├────────────────────────────────────────────────────────────────────────┤
+│ END-OF-STREAM MARKER (13 Bytes: Pipeline ID 0xFF, Uncomp 0, Comp 0, 0) │
+├────────────────────────────────────────────────────────────────────────┤
+│ STREAM FOOTER (48 Bytes)                                               │
+│   - Stream SHA-256 Digest     (32 Bytes) Bit-exact verification hash   │
+│   - Total Uncompressed Bytes  (uint64, 8 Bytes)                        │
+│   - Total Block Count         (uint32, 4 Bytes)                        │
+│   - Footer Magic Bytes        (4 Bytes)  b'XPED'                       │
+├────────────────────────────────────────────────────────────────────────┤
+│ SELF-HEALING RECOVERY RECORDS (Optional, if FLAG_RECOVERY)             │
+│   - Parity Payload Length     (uint32, 4 Bytes)                        │
+│   - Max Block Length          (uint32, 4 Bytes)                        │
+│   - Cauchy Reed-Solomon GF(2^8) MDS Parity Payload                     │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---

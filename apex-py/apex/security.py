@@ -1,6 +1,6 @@
 """
 ApexCompress Security & Authenticated Encryption Suite.
-Provides zero-knowledge PBKDF2 key derivation (100,000 rounds of SHA-256)
+Provides PBKDF2 key derivation (100,000 rounds of SHA-256)
 and authenticated encryption (Encrypt-then-HMAC-SHA256) with AES-256-CTR
 hardware acceleration and ChaCha20 pure-Python fallback.
 """

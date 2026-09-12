@@ -1,6 +1,6 @@
 """
 Advanced Feature Tests for ApexCompress:
-Zero-Knowledge Authenticated Encryption, Reed-Solomon Self-Healing Recovery,
+Authenticated Encryption, Reed-Solomon Self-Healing Recovery,
 Content-Aware Deduplication, and Corrupted Archive Repair.
 """
 

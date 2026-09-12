@@ -101,7 +101,7 @@ class TestCLI(unittest.TestCase):
             text=True,
         )
         self.assertEqual(res.returncode, 0, f"apex c -p failed: {res.stderr}")
-        self.assertIn("Zero-Knowledge", res.stdout)
+        self.assertIn("Authenticated Encryption", res.stdout)
 
         # Test with wrong password -> must fail
         res_fail = subprocess.run(

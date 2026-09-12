@@ -129,7 +129,7 @@ def cmd_compress(args):
     print(f"  {BOLD}Time Elapsed:{RESET}     {res['elapsed']:.2f}s ({speed_mb:.1f} MB/s)")
     print(f"  {BOLD}Stream SHA-256:{RESET}   {DIM}{res['sha256']}{RESET}")
     if res.get("encrypted"):
-        print(f"  {BOLD}Security:{RESET}        {GREEN}Zero-Knowledge Encryption (AES-256-CTR + HMAC-SHA256){RESET}")
+        print(f"  {BOLD}Security:{RESET}        {GREEN}Authenticated Encryption (AES-256-CTR + HMAC-SHA256){RESET}")
     if res.get("recovery"):
         print(f"  {BOLD}Self-Healing:{RESET}    {GREEN}Reed-Solomon Parity Records Attached{RESET}")
     print("=" * 60)
@@ -204,7 +204,7 @@ def cmd_test(args):
     print(f"  Uncompressed Size:   {format_bytes(res['total_uncompressed_bytes'])}")
     print(f"  Blocks Verified:     {res['total_blocks']} (all CRC-32 matches)")
     if res.get("encrypted"):
-        print(f"  Security:            {GREEN}Zero-Knowledge Authenticated Encryption Verified{RESET}")
+        print(f"  Security:            {GREEN}Authenticated Encryption Verified{RESET}")
     if res.get("has_recovery"):
         print(f"  Self-Healing:        {GREEN}Reed-Solomon Recovery Records Present & Ready{RESET}")
     print(f"  Cryptographic Hash:  {res['sha256']}")
@@ -347,7 +347,7 @@ def main():
     p_comp.add_argument("-o", "--output", help="Output .apx file path (default: ~/Downloads/<name>.apx)")
     p_comp.add_argument("-m", "--mode", choices=["fast", "balanced", "ultra", "brute"], default="balanced", help="Compression preset")
     p_comp.add_argument("-b", "--block-size", type=float, default=None, help="Block size in megabytes (default: 4 MB for fast, 2 MB for balanced/ultra)")
-    p_comp.add_argument("-p", "--password", help="Encrypt archive with zero-knowledge AES-256-CTR & HMAC-SHA256")
+    p_comp.add_argument("-p", "--password", help="Encrypt archive with AES-256-CTR & HMAC-SHA256")
     p_comp.add_argument("-r", "--recovery", action="store_true", help="Embed Reed-Solomon self-healing parity records")
     p_comp.add_argument("--cdc", action="store_true", help="Enable Content-Defined Chunking for game patches and delta updates")
     p_comp.add_argument("-v", "--verbose", action="store_true", help="Print block-level tournament winners")

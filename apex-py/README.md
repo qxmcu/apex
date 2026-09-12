@@ -1,6 +1,6 @@
 # ApexCompress (`apex`) ⚡📦
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0)
 [![CI Tests](https://img.shields.io/badge/Test_Suite-32%2F32_Passing-brightgreen.svg)]()
 [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)]()
 [![Python](https://img.shields.io/badge/Python-3.9_%7C_3.10_%7C_3.11_%7C_3.12_%7C_3.13_%7C_3.14-blue.svg)]()
@@ -141,7 +141,7 @@ Most industry archivers were built 15 to 30 years ago around a single, fixed com
 | **Integrity Verification** | **Dual: Per-Block CRC32 + Stream SHA-256** | CRC-32 only | CRC-32 only | CRC-32 / CRC-64 | XXH64 | None built-in | CRC-32 / BLAKE2sp |
 | **Standalone Native Binary** | **YES (14 MB single file, zero external runtime)** | Pre-installed | Pre-installed | Requires install | Requires install | Requires install | Proprietary Binary |
 | **macOS Finder Quick Actions** | **YES (Compress & Extract from Context Menu)** | None | None | None | None | None | None |
-| **Open Source License** | **Apache 2.0 (Permissive Commercial)** | GPL | BSD | LGPL / Public Domain | BSD / GPLv2 | MIT | Proprietary |
+| **Open Source License** | **GPLv3 (Strong Copyleft)** | GPL | BSD | LGPL / Public Domain | BSD / GPLv2 | MIT | Proprietary |
 
 ---
 
@@ -692,16 +692,23 @@ See the full [NOTICE](NOTICE) file for legal attribution and license terms.
 
 ## License
 
-ApexCompress is open-source software licensed under the **Apache License, Version 2.0**.
+ApexCompress is open-source software licensed under the **GNU General Public License v3.0**.
 
 See the [LICENSE](LICENSE) file for the complete license text.
 
 ```
-Copyright 2026 Apex Compression Lab
+Copyright (C) 2026 Apex Compression Lab
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-    http://www.apache.org/licenses/LICENSE-2.0
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ```

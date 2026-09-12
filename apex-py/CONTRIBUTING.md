@@ -91,7 +91,7 @@ ApexCompress is structured as a cleanly decoupled pipeline where each module has
 ```
 apex/
 ├── pyproject.toml              # Root build & dependency configuration
-├── LICENSE                     # Apache License, Version 2.0
+├── LICENSE                     # GNU General Public License v3.0
 ├── NOTICE                      # Attribution and legal notices
 ├── README.md                   # Primary project documentation
 ├── CONTRIBUTING.md             # This document
@@ -285,4 +285,4 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 
 ## 📜 License & Copyright
 
-By contributing to ApexCompress, you agree that your contributions will be licensed under the **[Apache License, Version 2.0](LICENSE)**.
+By contributing to ApexCompress, you agree that your contributions will be licensed under the **[GNU General Public License v3.0](LICENSE)**.

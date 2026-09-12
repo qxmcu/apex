@@ -154,6 +154,7 @@ ApexCompress achieves these results—even on a budget, low-power **AMD Ryzen 3 
 - **FastCDC Content-Defined Chunking**: Breaks data streams into dynamic chunks using rolling hashes, instantly aligning byte-boundaries for deduplication.
 - **Microsecond Fingerprinting**: Fuses CRC-32 and 128-bit BLAKE2b edge sampling to identify deduplication targets in under 1 microsecond per block.
 - **Adaptive Block Sizing**: Scales chunk windows dynamically. `fast` mode uses **4 MB** blocks for wider deduplication matches, `balanced` defaults to **2 MB** for optimal CPU L3 cache fit, and `ultra` scales to **8 MB** to maximize compression dictionary windows.
+- **Strictly Bounded RAM Footprint**: While tools like XZ and Zstd can consume gigabytes of RAM during heavy multi-threaded compression, Apex rigidly bounds memory consumption per logical core. Processing an 80 GB file uses the exact same low memory footprint (~30 MB in `balanced` mode) as an 8 MB file.
 
 ---
 

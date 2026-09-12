@@ -29,7 +29,7 @@ class TestCLI(unittest.TestCase):
         res = subprocess.run(
             APEX_CMD + ["c", str(sample), "-o", str(archive), "-m", "fast"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res.returncode, 0, f"apex c failed: {res.stderr}")
         self.assertTrue(archive.exists())
@@ -38,7 +38,7 @@ class TestCLI(unittest.TestCase):
         res = subprocess.run(
             APEX_CMD + ["l", str(archive)],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res.returncode, 0, f"apex l failed: {res.stderr}")
         self.assertIn("test.txt", res.stdout)
@@ -47,7 +47,7 @@ class TestCLI(unittest.TestCase):
         res = subprocess.run(
             APEX_CMD + ["t", str(archive)],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res.returncode, 0, f"apex t failed: {res.stderr}")
         self.assertIn("Archive Integrity PASSED", res.stdout)
@@ -57,7 +57,7 @@ class TestCLI(unittest.TestCase):
         res = subprocess.run(
             APEX_CMD + ["x", str(archive), "-d", str(out_dir)],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res.returncode, 0, f"apex x failed: {res.stderr}")
         restored = out_dir / "test.txt"
@@ -71,7 +71,7 @@ class TestCLI(unittest.TestCase):
         res = subprocess.run(
             APEX_CMD + ["i", str(sample)],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res.returncode, 0, f"apex i failed: {res.stderr}")
         self.assertIn("Shannon Entropy", res.stdout)
@@ -84,7 +84,7 @@ class TestCLI(unittest.TestCase):
         res = subprocess.run(
             APEX_CMD + ["b", str(sample)],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res.returncode, 0, f"apex b failed: {res.stderr}")
         self.assertIn("TOURNAMENT BENCHMARK SHOOTOUT", res.stdout)
@@ -98,7 +98,7 @@ class TestCLI(unittest.TestCase):
         res = subprocess.run(
             APEX_CMD + ["c", str(sample), "-o", str(archive), "-p", "secret123", "-m", "fast"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res.returncode, 0, f"apex c -p failed: {res.stderr}")
         self.assertIn("Authenticated Encryption", res.stdout)
@@ -107,7 +107,7 @@ class TestCLI(unittest.TestCase):
         res_fail = subprocess.run(
             APEX_CMD + ["t", str(archive), "-p", "wrongpassword"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertNotEqual(res_fail.returncode, 0)
 
@@ -115,7 +115,7 @@ class TestCLI(unittest.TestCase):
         res_test = subprocess.run(
             APEX_CMD + ["t", str(archive), "-p", "secret123"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res_test.returncode, 0, f"apex t -p failed: {res_test.stderr}")
         self.assertIn("Archive Integrity PASSED", res_test.stdout)
@@ -125,7 +125,7 @@ class TestCLI(unittest.TestCase):
         res_dec = subprocess.run(
             APEX_CMD + ["x", str(archive), "-d", str(out_dir), "-p", "secret123"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res_dec.returncode, 0, f"apex x -p failed: {res_dec.stderr}")
         restored = out_dir / "classified.txt"
@@ -141,7 +141,7 @@ class TestCLI(unittest.TestCase):
         res = subprocess.run(
             APEX_CMD + ["c", str(sample), "-o", str(archive), "-r", "-m", "fast"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res.returncode, 0, f"apex c -r failed: {res.stderr}")
         self.assertIn("Reed-Solomon", res.stdout)
@@ -159,7 +159,7 @@ class TestCLI(unittest.TestCase):
         res_corrupt = subprocess.run(
             APEX_CMD + ["t", str(archive)],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertNotEqual(res_corrupt.returncode, 0)
 
@@ -167,7 +167,7 @@ class TestCLI(unittest.TestCase):
         res_repair = subprocess.run(
             APEX_CMD + ["repair", str(archive), "-o", str(repaired)],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res_repair.returncode, 0, f"apex repair failed: {res_repair.stderr}")
         self.assertIn("Archive Successfully Repaired", res_repair.stdout)
@@ -176,7 +176,7 @@ class TestCLI(unittest.TestCase):
         res_fixed_test = subprocess.run(
             APEX_CMD + ["t", str(repaired)],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res_fixed_test.returncode, 0)
 
@@ -185,7 +185,7 @@ class TestCLI(unittest.TestCase):
         res_fixed_dec = subprocess.run(
             APEX_CMD + ["x", str(repaired), "-d", str(out_dir)],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(res_fixed_dec.returncode, 0)
         restored = out_dir / "photos.dat"

@@ -9,6 +9,14 @@ import time
 from pathlib import Path
 from typing import Optional
 
+# Force UTF-8 encoding on Windows to prevent UnicodeEncodeError with UI characters
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except AttributeError:
+        pass
+
 from apex.analyzer import analyze_file
 from apex.archive import (
     DEFAULT_BLOCK_SIZE,

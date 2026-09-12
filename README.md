@@ -196,6 +196,8 @@ Rank  | Engine / Tool                              | Compressed  | Ratio   | Sav
 ```
 > **Why Apex Obliterates the Competition Here**: The 100x repeated corpus forces Gzip and Bzip2 to re-compress identical data linearly. Apex's **FastCDC** rolling hash and **128-bit BLAKE2b fingerprinting** detects the duplicated block boundaries in microseconds, mapping identical chunks to a 4-byte reference pointer instead of compressing them. The result? Processing 269 MB in **34 milliseconds** while Gzip takes over 7.4 seconds.
 
+> 💡 **Verify It Yourself:** Don't trust our numbers? You can reproduce these exact shootouts on your own hardware. Simply run `apex benchmark <path-to-file>` to perform a live, un-simulated tournament between Apex and standard engines.
+
 ---
 
 ### Large-Scale Production Benchmark: 12.3 GB Xcode Toolchain

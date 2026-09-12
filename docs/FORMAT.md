@@ -93,3 +93,22 @@ If `FLAG_RECOVERY` is set, Reed-Solomon parity records are appended *after* the 
 *   **Parity Payload Length**: 4 bytes
 *   **Max Block Length**: 4 bytes
 *   **Parity Data**: Galois Field $(2^8)$ Cauchy Generator Matrix output.
+
+## 7. Compatibility, Determinism & Robustness Invariants
+
+### Format Versioning
+The `.apx` container format is independently versioned:
+- Magic signature byte 4 (`0x01`) represents Container Format Version 1 (`b'APEX\x01\x00\x00\x00'`).
+- Backward Compatibility: All APEX 1.x point releases are guaranteed to decompress archives created by any earlier 1.x version.
+- Forward Compatibility: When an older decompressor encounters an unknown major format version (magic mismatch), it halts with an explicit version upgrade message.
+
+### Cross-Platform Portability
+- **Path Normalization**: All relative file paths inside the metadata manifest are stored using standard POSIX forward slashes (`/`), regardless of whether created on Windows (`\`) or UNIX.
+- **Endianness**: All integer fields in headers, footers, and block structures are strictly serialized in standard Little-Endian format (`<`).
+- **Permissions**: File modes and mtimes are preserved using standard POSIX representations; Windows platforms map appropriate read-only flags cleanly.
+
+### Determinism Guarantee
+Given identical input bytes, the same APEX release, and identical CLI arguments (mode, chunk size, threads), APEX produces byte-for-byte identical `.apx` container files across separate runs. Directory traversal sorts file manifest entries alphabetically to prevent filesystem non-determinism.
+
+### Unknown Transform & Engine Handling
+Each payload block specifies a 1-byte `Pipeline ID`. If an archive contains a Pipeline ID unknown to the running decompressor, the extraction process immediately raises an explicit error (`ValueError: Unrecognized pipeline ID 0xXX: please upgrade APEX to read this block`) and aborts, ensuring data corruption is never silently emitted to disk.

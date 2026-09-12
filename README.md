@@ -1,8 +1,7 @@
 <img src="logo.svg" align="left" width="160" hspace="20" alt="ApexCompress Logo" />
 
-# APEX
-
-### Adaptive Multi-Engine Lossless Compression & Archival
+### ⚡ APEX ⚡📦
+**Adaptive Multi-Engine Lossless Compression & Archival**
 
 [![Status](https://img.shields.io/badge/Status-Production_Release-brightgreen.svg)]() [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0) [![CI Tests](https://img.shields.io/badge/Test_Suite-32%2F32_Passing-brightgreen.svg)]() [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)]() [![Python](https://img.shields.io/badge/Python-3.9_%7C_3.10_%7C_3.11_%7C_3.12_%7C_3.13_%7C_3.14-blue.svg)]()<br>
 [![Standalone Binary](https://img.shields.io/badge/Standalone_Binary-Zero_External_Dependencies-orange.svg)]() [![Integrity](https://img.shields.io/badge/Integrity-100%25_Bit--Exact_SHA--256-success.svg)]() [![Security](https://img.shields.io/badge/Security-AES--256--CTR_%2B_HMAC--SHA256-red.svg)]()
@@ -73,13 +72,15 @@ For example:
 
 ## Table of Contents
 
-- [The Science: Why Universal Archivers Fail](#the-science-why-universal-archivers-fail)
+- [The Compression Problem: Heterogeneous Data](#the-compression-problem-heterogeneous-data)
   - [The 3-Stage Tournament Funnel](#the-3-stage-tournament-funnel)
   - [Reversible Domain Preconditioning Filters](#reversible-domain-preconditioning-filters)
-- [Why Apex Outperforms Traditional Archivers](#why-apex-outperforms-traditional-archivers)
+- [Architecture & Benchmark Results](#architecture--benchmark-results)
   - [Feature & Architectural Comparison Matrix](#feature--architectural-comparison-matrix)
-  - [Benchmark Shootout: Real-World Mixed Structured Data](#benchmark-shootout-real-world-mixed-structured-data)
+  - [Benchmark Shootout: Standard Canterbury Corpus](#benchmark-shootout-standard-canterbury-corpus-282-mb)
+  - [Benchmark Shootout: Extreme Deduplication](#benchmark-shootout-extreme-deduplication-269-mb-repeated-corpus)
   - [Large-Scale Production Benchmark: 12.3 GB Xcode Toolchain](#large-scale-production-benchmark-123-gb-xcode-toolchain)
+- [Known limitations](#known-limitations)
 - [Comprehensive CLI Command Reference](#comprehensive-cli-command-reference)
   - [1. apex compress (c)](#1-apex-compress-c)
   - [2. apex decompress (x, extract)](#2-apex-decompress-x-extract)
@@ -98,7 +99,7 @@ For example:
 - [Installation & Setup](#installation--setup)
   - [Option 1: Standalone Native Executable (Zero External Dependencies)](#option-1-standalone-native-executable-zero-external-dependencies)
   - [Option 2: Python Package (pip)](#option-2-python-package-pip)
-- [Automated Test Suite](#automated-test-suite)
+- [Guarantees](#guarantees)
 - [Contributing](#contributing)
 - [Third-Party Notices & Licenses](#third-party-notices--licenses)
 - [License](#license)

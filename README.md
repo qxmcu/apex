@@ -560,7 +560,7 @@ The standalone binary bundles the entire runtime and C extensions into a single 
 #### Building the Standalone Binary on Your System:
 ```bash
 # Clone the repository
-git clone https://github.com/apexcompress/apex.git
+git clone https://github.com/qxmcu/apex.git
 cd apex
 
 # Build single onefile standalone binary
@@ -585,7 +585,7 @@ Install ApexCompress into your active Python environment:
 
 ```bash
 # Clone the repository
-git clone https://github.com/apexcompress/apex.git
+git clone https://github.com/qxmcu/apex.git
 cd apex
 
 # Install in editable mode

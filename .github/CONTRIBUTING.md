@@ -54,7 +54,7 @@ There are many ways to contribute to ApexCompress:
 ### 2. Fork & Clone the Repository
 ```bash
 # Fork the repository on GitHub, then clone your fork:
-git clone https://github.com/<your-username>/apex.git
+git clone https://github.com/qxmcu/apex.git
 cd apex
 ```
 

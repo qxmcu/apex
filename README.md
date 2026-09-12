@@ -640,7 +640,7 @@ We welcome contributions from the open-source community! Whether you are adding 
 ## Third-Party Notices & Licenses
 
 When built or distributed as a standalone binary, ApexCompress statically bundles or links open-source components under permissive licenses:
-- **Zstandard (`zstd`)**: BSD 3-Clause License (Meta Platforms, Inc.)
+- **Zstandard (`zstd`)**: BSD 3-Clause License / GPLv2 (Meta Platforms, Inc.)
 - **Brotli**: MIT License (Google Inc.)
 - **CPython**: Python Software Foundation License (PSF)
 - **Nuitka**: Apache License 2.0 (Kay Hayen)

@@ -82,12 +82,14 @@ For example:
 - [Known limitations](#known-limitations)
 - [Comprehensive CLI Command Reference](#comprehensive-cli-command-reference)
   - [1. apex compress (c)](#1-apex-compress-c)
-  - [2. apex decompress (x, extract)](#2-apex-decompress-x-extract)
+  - [2. apex decompress (x, extract) & Selective Extraction](#2-apex-decompress-x-extract)
   - [3. apex test (t)](#3-apex-test-t)
   - [4. apex list (l)](#4-apex-list-l)
-  - [5. apex repair (fix, heal)](#5-apex-repair-fix-heal)
-  - [6. apex benchmark (b)](#6-apex-benchmark-b)
-  - [7. apex info (i)](#7-apex-info-i)
+  - [5. apex diff (d)](#5-apex-diff-d)
+  - [6. apex completions](#6-apex-completions)
+  - [7. apex repair (fix, heal)](#7-apex-repair-fix-heal)
+  - [8. apex benchmark (b)](#8-apex-benchmark-b)
+  - [9. apex info (i)](#9-apex-info-i)
 - [Advanced Capabilities](#advanced-capabilities)
   - [1. Self-Healing Reed-Solomon Parity (Bit-Rot Defense)](#1-self-healing-reed-solomon-parity-bit-rot-defense)
   - [2. Authenticated Encryption (AES-256-CTR + HMAC-SHA256)](#2-authenticated-encryption-aes-256-ctr--hmac-sha256)
@@ -444,14 +446,24 @@ apex x archive.apx -d /path/to/destination
 
 # Extract an encrypted archive
 apex x secure_vault.apx -d ./vault -p "Passphrase123"
+
+# Selective extraction by pattern or glob
+apex x archive.apx -i "*.json" -i "*.png"
+
+# Selective extraction of specific files
+apex x archive.apx path/to/file.txt assets/icon.png -d ./extracted
 ```
 
 #### Options & Flags:
 | Flag | Shorthand | Type | Default | Description |
 | :--- | :---: | :---: | :---: | :--- |
 | `--dest` | `-d` | `PATH` | Current Dir | Destination directory to extract files into |
+| `--include` | `-i` | `PATTERN` | `None` | Glob pattern or path to selectively extract (repeatable) |
+| `files` | *(positional)* | `PATH...` | `None` | Specific files or paths to selectively extract |
 | `--password` | `-p` | `STRING` | `None` | Password for encrypted archives |
 | `--quiet` | `-q` | `FLAG` | `False` | Suppress interactive progress bar |
+
+> **Zero-Overhead Memoryview Skipping**: When extracting selectively from solid `.apx` archives, APEX does not write unwanted files to disk or allocate temporary heap memory for skipped payloads. It advances slice cursors over zero-copy memoryviews while preserving full block CRC-32 and stream SHA-256 cryptographic verification.
 
 #### Example Output:
 ```
@@ -525,7 +537,69 @@ Total Uncompressed: 1.78 MB | Archive Size: 432.1 KB | Savings: 75.7%
 
 ---
 
-### 5. apex repair (fix, heal)
+### 5. apex diff (d)
+
+Compares two `.apx` archives by reading their embedded headers and manifests. Executes in milliseconds without decompressing block payloads to disk. Identifies added, removed, modified, and unchanged files, alongside net uncompressed size deltas.
+
+```bash
+# Compare two archives
+apex diff release_v1.apx release_v2.apx
+
+# Shorthand alias
+apex d archive_old.apx archive_new.apx
+
+# Output machine-readable JSON diff
+apex diff release_v1.apx release_v2.apx --json
+```
+
+#### Example Output:
+```
+Apex Archive Comparison:
+  Old (-): release_v1.apx (3.4 MB, uncompressed: 14.8 MB)
+  New (+): release_v2.apx (3.6 MB, uncompressed: 15.2 MB)
+
++ Added (2):
+  + src/modules/telemetry.py (14.2 KB)
+  + assets/branding/logo_4k.png (420.5 KB)
+
+- Removed (1):
+  - legacy/deprecated_codec.py (8.1 KB)
+
+~ Modified (3):
+  ~ src/core/engine.py (+1.2 KB, 38.4 KB → 39.6 KB)
+  ~ config/default.json (-42 B, 1.2 KB → 1.1 KB)
+  ~ binary/weights.bin (+380.0 KB, 12.0 MB → 12.4 MB)
+
+============================================================
+  Summary: +2 added, -1 removed, ~3 modified, 142 unchanged
+  Net Size Delta: +413.4 KB uncompressed
+============================================================
+```
+
+---
+
+### 6. apex completions
+
+Generates native shell completion scripts for **Bash**, **Zsh**, and **Fish**, providing tab-completion for all subcommands, presets, flags, and file extensions.
+
+```bash
+# Bash:
+source <(apex completions bash)
+# or persist system-wide:
+apex completions bash | sudo tee /etc/bash_completion.d/apex
+
+# Zsh:
+source <(apex completions zsh)
+# or persist:
+apex completions zsh > "${fpath[1]}/_apex"
+
+# Fish:
+apex completions fish > ~/.config/fish/completions/apex.fish
+```
+
+---
+
+### 7. apex repair (fix, heal)
 
 Reconstructs damaged `.apx` archives that suffered bit rot, bad disk sectors, or transmission data loss using Cauchy Reed-Solomon parity records.
 
@@ -556,7 +630,7 @@ apex fix corrupted_archive.apx -o healthy_archive.apx
 
 ---
 
-### 6. apex benchmark (b)
+### 8. apex benchmark (b)
 
 Performs a live shootout tournament benchmark comparing ApexCompress against **Gzip**, **Bzip2**, **XZ**, **Zstandard**, and **Brotli** on any file or directory.
 
@@ -583,7 +657,7 @@ Rank  | Engine / Pipeline                           | Compressed  | Ratio    | S
 
 ---
 
-### 7. apex info (i)
+### 9. apex info (i)
 
 Performs deep structural and cryptographic entropy analysis on any file. Calculates **Shannon Entropy** ($H$), theoretical lossless compressibility limit, byte distributions, and recommends the optimal preconditioning transform.
 

@@ -1,0 +1,70 @@
+name: Build Linux Standalone Executable
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build & Package Linux x86_64 Executable
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf ccache build-essential
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[fast-recovery,test]"
+          python -m pip install nuitka zstandard brotli
+
+      - name: Compile Standalone Executable with Nuitka
+        run: |
+          python apex-py/build_standalone.py
+
+      - name: Smoke test compiled Linux binary
+        run: |
+          chmod +x ./apex-py/dist/apex
+          ./apex-py/dist/apex --version
+          ./apex-py/dist/apex --help
+          ./apex-py/dist/apex info pyproject.toml
+
+      - name: Package Linux Binary and Generate Checksum
+        run: |
+          mkdir -p release-pkg
+          cp apex-py/dist/apex release-pkg/apex
+          cd release-pkg
+          tar -czvf ../apex-v1.0.1-linux-x86_64.tar.gz apex
+          cd ..
+          sha256sum apex-v1.0.1-linux-x86_64.tar.gz > apex-v1.0.1-linux-x86_64.tar.gz.sha256
+          echo "Package created successfully:"
+          ls -la apex-v1.0.1-linux*
+          cat apex-v1.0.1-linux-x86_64.tar.gz.sha256
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-linux-x86_64
+          path: |
+            apex-v1.0.1-linux-x86_64.tar.gz
+            apex-v1.0.1-linux-x86_64.tar.gz.sha256
+
+      - name: Upload to GitHub Release v1.0.1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v1.0.1 apex-v1.0.1-linux-x86_64.tar.gz apex-v1.0.1-linux-x86_64.tar.gz.sha256 --clobber

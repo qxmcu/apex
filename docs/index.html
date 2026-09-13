@@ -730,7 +730,7 @@ reg import windows_context.reg</pre>
   <section id="install" class="py-16 sm:py-20 bg-[#090A0F]">
     <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
       
-      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 sm:pb-8 border-b border-hairline gap-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 pb-6 sm:pb-8 border-b border-hairline gap-6">
         <div>
           <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">06 // STANDALONE DEPLOYMENT</span>
           <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">Native Executables</h2>
@@ -738,6 +738,22 @@ reg import windows_context.reg</pre>
         <p class="text-sm text-brand-muted max-w-md font-mono">
           Compiled natively with Nuitka into zero-dependency standalone binaries. No Python runtime required.
         </p>
+      </div>
+
+      <!-- Homebrew Tap Card -->
+      <div class="mb-10 border border-brand-acid/40 bg-brand-panel p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 font-mono">
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <span class="px-2 py-0.5 text-[10px] bg-brand-acid/20 text-brand-acid border border-brand-acid/40 font-bold uppercase tracking-wider">Recommended (macOS &amp; Linux)</span>
+            <span class="text-white font-bold text-base uppercase tracking-wider">Homebrew Tap</span>
+          </div>
+          <p class="text-xs text-brand-muted max-w-xl leading-relaxed">
+            Install Apex with automatic shell completions (Bash, Zsh, Fish) and cryptographic SHA-256 validation via the official Homebrew tap.
+          </p>
+        </div>
+        <div class="w-full md:w-auto shrink-0">
+          <pre class="p-3.5 bg-black border border-brand-border text-xs text-brand-acid select-all custom-scrollbar">brew install qxmcu/tap/apex</pre>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -830,6 +846,7 @@ tar -xf apex-v1.1.0-windows-x86_64.zip
           <div class="text-white font-bold uppercase tracking-wider mb-4">Documentation</div>
           <ul class="space-y-2 text-[11px]">
             <li><a href="https://github.com/qxmcu/apex#readme" class="hover:text-brand-acid transition-colors">Container Specification (.apx)</a></li>
+            <li><a href="https://github.com/qxmcu/homebrew-tap" class="hover:text-brand-acid transition-colors">Homebrew Tap Formula</a></li>
             <li><a href="https://github.com/qxmcu/apex#compression-modes" class="hover:text-brand-acid transition-colors">Compression Modes Guide</a></li>
             <li><a href="https://github.com/qxmcu/apex#benchmarks" class="hover:text-brand-acid transition-colors">Canterbury Benchmark Logs</a></li>
             <li><a href="https://github.com/qxmcu/apex#self-healing-verification" class="hover:text-brand-acid transition-colors">Reed-Solomon Parity Math</a></li>

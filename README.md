@@ -103,8 +103,9 @@ For example:
   - [7. Python Library SDK & In-Memory Tournament Engine](#7-python-library-sdk--in-memory-tournament-engine)
 - [Binary Container Specification (.apx)](#binary-container-specification-apx)
 - [Installation & Setup](#installation--setup)
-  - [Option 1: Standalone Native Executable (Zero External Dependencies)](#option-1-standalone-native-executable-zero-external-dependencies)
-  - [Option 2: Python Package (pip)](#option-2-python-package-pip)
+  - [Option 1: Homebrew (macOS & Linux)](#option-1-homebrew-macos--linux)
+  - [Option 2: Standalone Native Executable (Zero External Dependencies)](#option-2-standalone-native-executable-zero-external-dependencies)
+  - [Option 3: Python Package (pip)](#option-3-python-package-pip)
 - [Guarantees & Verification](#guarantees--verification)
 - [Contributing](#contributing)
 - [Third-Party Notices & Licenses](#third-party-notices--licenses)
@@ -858,7 +859,28 @@ Apex archives follow a strict, forward-compatible binary specification:
 
 ## Installation & Setup
 
-### Option 1: Standalone Native Executable
+### Option 1: Homebrew (macOS & Linux) 🍺
+
+Install Apex via the official Homebrew tap with automatic shell autocompletion configuration:
+
+```bash
+brew install qxmcu/tap/apex
+```
+
+Or add the tap repository:
+```bash
+brew tap qxmcu/tap
+brew install apex
+```
+
+To update to future releases:
+```bash
+brew update && brew upgrade apex
+```
+
+---
+
+### Option 2: Standalone Native Executable
 
 **Standalone builds bundle their runtime and dependencies.** Target machines do not require Python, compilers, or any external libraries installed.
 
@@ -892,7 +914,7 @@ apex --help
 
 ---
 
-### Option 2: Python Package (pip)
+### Option 3: Python Package (pip)
 
 Install ApexCompress into your active Python environment:
 

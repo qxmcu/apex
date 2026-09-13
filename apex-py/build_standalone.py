@@ -17,6 +17,9 @@ from pathlib import Path
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     root_dir = Path(__file__).resolve().parent
     launcher = root_dir / "apex_launcher.py"
     dist_dir = root_dir / "dist"
@@ -67,7 +70,7 @@ def main():
     if binary_path.exists():
         size_mb = binary_path.stat().st_size / (1024 * 1024)
         print("\n" + "=" * 60)
-        print("  ✓ Standalone Executable Built Successfully!")
+        print("  [OK] Standalone Executable Built Successfully!")
         print(f"  Output Path: {binary_path}")
         print(f"  Size:        {size_mb:.2f} MB")
         print("=" * 60)

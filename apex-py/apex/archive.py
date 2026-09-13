@@ -723,6 +723,7 @@ def _write_single_file_fast(target_path: str, data: Any, mode: int, mtime: float
     try:
         fd = os.open(target_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, mode)
     except OSError:
+        Path(target_path).parent.mkdir(parents=True, exist_ok=True)
         # Conflict: existing read-only file, directory, or permissions issue
         try:
             os.chmod(target_path, 0o777)
@@ -1122,16 +1123,17 @@ def decompress_archive(
                 for file_entry in manifest.files:
                     if not should_extract(file_entry.rel_path):
                         continue
+                    rel_norm = file_entry.rel_path.replace("\\", "/")
                     if file_entry.is_dir:
-                        parts = file_entry.rel_path.split("/")
+                        parts = rel_norm.split("/")
                         curr = ""
                         for part in parts:
                             curr = (curr + "/" + part) if curr else part
                             unique_dirs.add(curr)
                     else:
-                        p_idx = file_entry.rel_path.rfind("/")
+                        p_idx = rel_norm.rfind("/")
                         if p_idx != -1:
-                            parts = file_entry.rel_path[:p_idx].split("/")
+                            parts = rel_norm[:p_idx].split("/")
                             curr = ""
                             for part in parts:
                                 curr = (curr + "/" + part) if curr else part
@@ -1205,7 +1207,8 @@ def decompress_archive(
                             skip_bytes(file_entry.size)
                         continue
 
-                    target_str = dest_root_str + file_entry.rel_path
+                    rel_norm = file_entry.rel_path.replace("\\", "/")
+                    target_str = dest_root_str + rel_norm
 
                     if file_entry.is_dir:
                         deferred_dir_perms.append((target_str, file_entry.mode, file_entry.mtime))

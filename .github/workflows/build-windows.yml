@@ -1,0 +1,66 @@
+name: Build Windows Standalone Executable
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build & Package Windows x86_64 Executable
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[fast-recovery,test]"
+          python -m pip install nuitka zstandard brotli
+
+      - name: Compile Standalone Executable with Nuitka
+        run: |
+          python apex-py/build_standalone.py
+
+      - name: Smoke test compiled Windows binary
+        run: |
+          ./apex-py/dist/apex.exe --version
+          ./apex-py/dist/apex.exe --help
+          ./apex-py/dist/apex.exe info pyproject.toml
+
+      - name: Package Windows Binary and Generate Checksum
+        shell: bash
+        run: |
+          mkdir -p release-pkg
+          cp apex-py/dist/apex.exe release-pkg/apex.exe
+          cd release-pkg
+          7z a ../apex-v1.0.1-windows-x86_64.zip apex.exe
+          cd ..
+          sha256sum apex-v1.0.1-windows-x86_64.zip > apex-v1.0.1-windows-x86_64.zip.sha256
+          echo "Package created successfully:"
+          ls -la apex-v1.0.1-windows*
+          cat apex-v1.0.1-windows-x86_64.zip.sha256
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-windows-x86_64
+          path: |
+            apex-v1.0.1-windows-x86_64.zip
+            apex-v1.0.1-windows-x86_64.zip.sha256
+
+      - name: Upload to GitHub Release v1.0.1
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v1.0.1 apex-v1.0.1-windows-x86_64.zip apex-v1.0.1-windows-x86_64.zip.sha256 --clobber || echo "Workflow upload failed, will upload via local runner"

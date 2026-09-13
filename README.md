@@ -781,27 +781,38 @@ reg import scripts\windows_context_menu.reg
 
 ### 7. Python Library SDK & In-Memory Tournament Engine
 
-ApexCompress provides a first-class, fully typed Python API for integrating adaptive tournament compression into Python applications, automated data pipelines, and microservices:
+ApexCompress provides a first-class, fully typed Python API (`import apex`) for integrating adaptive tournament compression into Python applications, automated data pipelines, and microservices:
 
 ```python
 import apex
 
-# 1. High-level archive compression
-res = apex.compress("data_dir", "dataset.apx", mode="balanced", recovery=True)
+# 1. Zero-config archive compression (destination defaults to "dataset.apx", mode="balanced")
+res = apex.compress("dataset", recovery=True)
 print(f"Compressed {res['uncompressed_bytes']} -> {res['compressed_bytes']} bytes ({res['ratio']:.2f}x)")
 
-# 2. Extract with optional selective filtering
+# 2. Extract with optional selective pattern filtering
 apex.extract("dataset.apx", destination="./extracted", include=["*.json", "weights/*"])
 
 # 3. Cryptographic integrity check (without extracting)
 test_res = apex.test("dataset.apx")
 assert test_res["status"] == "PASSED"
 
-# 4. Instant archive diffing
+# 4. Instant archive diffing (metadata only, zero block decompression)
 diff = apex.diff("release_v1.apx", "release_v2.apx")
 print(f"Net change: {diff['size_delta']} bytes, added: {len(diff['added'])} files")
 
-# 5. In-memory buffer tournament compression (zero disk I/O)
+# 5. Authenticated encryption (AES-256-CTR + HMAC-SHA256)
+apex.compress("secrets_dir", "secrets.apx", password="CorrectHorseBatteryStaple")
+apex.extract("secrets.apx", destination="./unlocked", password="CorrectHorseBatteryStaple")
+
+# 6. Self-healing archive repair via Cauchy Reed-Solomon parity
+apex.repair("damaged.apx", destination="repaired.apx")
+
+# 7. Entropy and compressibility analysis (Shannon theoretical limit)
+analysis = apex.info("sample.bin")
+print(f"Entropy: {analysis.shannon_entropy:.3f} bits/byte, Theoretical Max Ratio: {analysis.shannon_ratio:.2f}x")
+
+# 8. In-memory buffer tournament compression (zero disk I/O, auto-detected decompressor)
 raw_payload = b"Heterogeneous simulation data..." * 1000
 compressed = apex.compress_bytes(raw_payload, mode="ultra")
 restored = apex.decompress_bytes(compressed)

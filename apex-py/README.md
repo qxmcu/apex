@@ -94,6 +94,8 @@ For example:
   - [3. Content-Aware FastCDC Block Deduplication](#3-content-aware-fastcdc-block-deduplication)
   - [4. Zero-Bloat High-Entropy Pass-Through](#4-zero-bloat-high-entropy-pass-through)
   - [5. macOS Finder Integration (Quick Actions)](#5-macos-finder-integration-quick-actions)
+  - [6. Windows Explorer Context Menu Integration](#6-windows-explorer-context-menu-integration)
+  - [7. Python Library SDK & In-Memory Tournament Engine](#7-python-library-sdk--in-memory-tournament-engine)
 - [Binary Container Specification (.apx)](#binary-container-specification-apx)
 - [Installation & Setup](#installation--setup)
   - [Option 1: Homebrew (macOS & Linux)](#option-1-homebrew-macos--linux)
@@ -675,6 +677,62 @@ ApexCompress integrates directly into the native macOS Finder context menu:
 - **Extract with Apex**: Right-click any `.apx` file $\rightarrow$ *Quick Actions* $\rightarrow$ **Extract with Apex**. Restores all files with full POSIX permissions and timestamps.
 
 Workflows are installed in: `~/Library/Services/`
+
+---
+
+### 6. Windows Explorer Context Menu Integration
+
+ApexCompress includes seamless Windows Explorer right-click integration via [`scripts/windows_context_menu.reg`](../scripts/windows_context_menu.reg):
+
+- **Right-click files/folders**: "Compress with Apex" submenu with one-click presets (**Balanced**, **Ultra Density**, **Fast**, and **Self-Healing Recovery**).
+- **Right-click `.apx` archives**: "Extract with Apex", "Test Archive Integrity", and "Repair Damaged Archive".
+
+To install, simply double-click `scripts/windows_context_menu.reg` or run:
+```cmd
+reg import scripts\windows_context_menu.reg
+```
+
+---
+
+### 7. Python Library SDK & In-Memory Tournament Engine
+
+ApexCompress provides a first-class, fully typed Python API (`import apex`) for integrating adaptive tournament compression into Python applications, automated data pipelines, and microservices:
+
+```python
+import apex
+
+# 1. Zero-config archive compression (destination defaults to "dataset.apx", mode="balanced")
+res = apex.compress("dataset", recovery=True)
+print(f"Compressed {res['uncompressed_bytes']} -> {res['compressed_bytes']} bytes ({res['ratio']:.2f}x)")
+
+# 2. Extract with optional selective pattern filtering
+apex.extract("dataset.apx", destination="./extracted", include=["*.json", "weights/*"])
+
+# 3. Cryptographic integrity check (without extracting)
+test_res = apex.test("dataset.apx")
+assert test_res["status"] == "PASSED"
+
+# 4. Instant archive diffing (metadata only, zero block decompression)
+diff = apex.diff("release_v1.apx", "release_v2.apx")
+print(f"Net change: {diff['size_delta']} bytes, added: {len(diff['added'])} files")
+
+# 5. Authenticated encryption (AES-256-CTR + HMAC-SHA256)
+apex.compress("secrets_dir", "secrets.apx", password="CorrectHorseBatteryStaple")
+apex.extract("secrets.apx", destination="./unlocked", password="CorrectHorseBatteryStaple")
+
+# 6. Self-healing archive repair via Cauchy Reed-Solomon parity
+apex.repair("damaged.apx", destination="repaired.apx")
+
+# 7. Entropy and compressibility analysis (Shannon theoretical limit)
+analysis = apex.info("sample.bin")
+print(f"Entropy: {analysis.shannon_entropy:.3f} bits/byte, Theoretical Max Ratio: {analysis.shannon_ratio:.2f}x")
+
+# 8. In-memory buffer tournament compression (zero disk I/O, auto-detected decompressor)
+raw_payload = b"Heterogeneous simulation data..." * 1000
+compressed = apex.compress_bytes(raw_payload, mode="ultra")
+restored = apex.decompress_bytes(compressed)
+assert restored == raw_payload
+```
 
 ---
 

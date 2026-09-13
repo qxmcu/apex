@@ -347,6 +347,7 @@ def main():
         description="ApexCompress: The Adaptive Tournament Multi-Engine Compression Tool.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("-V", "--version", action="version", version="%(prog)s 1.0.1")
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
     # Compress

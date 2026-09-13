@@ -191,6 +191,76 @@ class TestCLI(unittest.TestCase):
         restored = out_dir / "photos.dat"
         self.assertEqual(restored.read_bytes(), sample.read_bytes())
 
+    def test_cli_version(self):
+        res = subprocess.run(
+            APEX_CMD + ["-V"],
+            capture_output=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(res.returncode, 0)
+        self.assertIn("1.1.0", res.stdout)
+
+    def test_cli_selective_extraction(self):
+        sample_dir = Path(self.tmpdir) / "cli_sel_src"
+        sample_dir.mkdir()
+        (sample_dir / "keep.json").write_text('{"important": true}')
+        (sample_dir / "ignore.log").write_text("2026-01-01 info log")
+
+        archive = Path(self.tmpdir) / "selective.apx"
+        subprocess.run(
+            APEX_CMD + ["c", str(sample_dir), "-o", str(archive), "-m", "fast"],
+            check=True,
+        )
+
+        out_dir = Path(self.tmpdir) / "cli_sel_out"
+        res = subprocess.run(
+            APEX_CMD + ["x", str(archive), "-d", str(out_dir), "-i", "*.json"],
+            capture_output=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(res.returncode, 0, f"selective x failed: {res.stderr}")
+        self.assertTrue((out_dir / "cli_sel_src" / "keep.json").exists())
+        self.assertFalse((out_dir / "cli_sel_src" / "ignore.log").exists())
+
+    def test_cli_diff(self):
+        f1 = Path(self.tmpdir) / "diff_f1.txt"
+        f1.write_text("Hello world A")
+        f2 = Path(self.tmpdir) / "diff_f2.txt"
+        f2.write_text("Hello world B plus extra content")
+
+        a1 = Path(self.tmpdir) / "diff1.apx"
+        a2 = Path(self.tmpdir) / "diff2.apx"
+
+        subprocess.run(APEX_CMD + ["c", str(f1), "-o", str(a1), "-m", "fast"], check=True)
+        subprocess.run(APEX_CMD + ["c", str(f2), "-o", str(a2), "-m", "fast"], check=True)
+
+        res = subprocess.run(
+            APEX_CMD + ["diff", str(a1), str(a2)],
+            capture_output=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(res.returncode, 0, f"apex diff failed: {res.stderr}")
+        self.assertIn("Apex Archive Comparison", res.stdout)
+
+        # JSON output
+        res_json = subprocess.run(
+            APEX_CMD + ["diff", str(a1), str(a2), "--json"],
+            capture_output=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(res_json.returncode, 0)
+        self.assertIn('"archive1":', res_json.stdout)
+
+    def test_cli_completions(self):
+        for shell in ["bash", "zsh", "fish"]:
+            res = subprocess.run(
+                APEX_CMD + ["completions", shell],
+                capture_output=True,
+                encoding="utf-8",
+            )
+            self.assertEqual(res.returncode, 0, f"completions {shell} failed: {res.stderr}")
+            self.assertIn("apex", res.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

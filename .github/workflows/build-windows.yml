@@ -2,6 +2,11 @@ name: Build Windows Standalone Executable
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag (e.g. v1.1.0)'
+        required: false
+        default: 'v1.1.0'
 
 permissions:
   contents: write
@@ -42,27 +47,30 @@ jobs:
       - name: Package Windows Binary and Generate Checksum
         shell: bash
         run: |
+          VERSION="${{ github.event.inputs.version || 'v1.1.0' }}"
+          echo "Packaging for version ${VERSION}..."
           mkdir -p release-pkg
           cp apex-py/dist/apex.exe release-pkg/apex.exe
           cd release-pkg
-          7z a ../apex-v1.0.1-windows-x86_64.zip apex.exe
+          7z a "../apex-${VERSION}-windows-x86_64.zip" apex.exe
           cd ..
-          sha256sum apex-v1.0.1-windows-x86_64.zip > apex-v1.0.1-windows-x86_64.zip.sha256
+          sha256sum "apex-${VERSION}-windows-x86_64.zip" > "apex-${VERSION}-windows-x86_64.zip.sha256"
           echo "Package created successfully:"
-          ls -la apex-v1.0.1-windows*
-          cat apex-v1.0.1-windows-x86_64.zip.sha256
+          ls -la apex-*-windows*
+          cat "apex-${VERSION}-windows-x86_64.zip.sha256"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: apex-windows-x86_64
           path: |
-            apex-v1.0.1-windows-x86_64.zip
-            apex-v1.0.1-windows-x86_64.zip.sha256
+            apex-*-windows-x86_64.zip
+            apex-*-windows-x86_64.zip.sha256
 
-      - name: Upload to GitHub Release v1.0.1
+      - name: Upload to GitHub Release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload v1.0.1 apex-v1.0.1-windows-x86_64.zip apex-v1.0.1-windows-x86_64.zip.sha256 --clobber || echo "Workflow upload failed, will upload via local runner"
+          VERSION="${{ github.event.inputs.version || 'v1.1.0' }}"
+          gh release upload "${VERSION}" apex-${VERSION}-windows-x86_64.zip apex-${VERSION}-windows-x86_64.zip.sha256 --clobber

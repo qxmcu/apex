@@ -6,6 +6,7 @@ self-healing recovery records, and cryptographic SHA-256 validation.
 """
 
 import concurrent.futures
+import fnmatch
 import getpass
 import hashlib
 import json
@@ -783,6 +784,7 @@ def decompress_archive(
     output_dir: Optional[str] = None,
     password: Optional[str] = None,
     progress_callback: Optional[Callable[[int, int, int], None]] = None,
+    include_patterns: Optional[List[str]] = None,
 ) -> Dict:
     """
     Decompresses and reconstructs files/directories with exact permissions, symlinks, and mtimes.
@@ -979,6 +981,37 @@ def decompress_archive(
                     filled += take
                 return buf_view
 
+            def skip_bytes(needed: int) -> None:
+                nonlocal cur_block, cur_mv, cur_offset
+                rem = needed
+                while rem > 0:
+                    if cur_mv is None or cur_offset >= len(cur_mv):
+                        chunk = block_queue.get()
+                        if chunk is None:
+                            if feeder_stats["error"]:
+                                raise feeder_stats["error"]
+                            raise EOFError("Unexpected end of compressed stream")
+                        cur_block = chunk
+                        cur_mv = memoryview(chunk)
+                        cur_offset = 0
+                    avail = len(cur_mv) - cur_offset
+                    take = min(rem, avail)
+                    cur_offset += take
+                    rem -= take
+
+            def should_extract(rel_path: str) -> bool:
+                if not include_patterns:
+                    return True
+                norm = rel_path.replace("\\", "/")
+                basename = norm.split("/")[-1]
+                for pat in include_patterns:
+                    pat_norm = pat.replace("\\", "/").rstrip("/")
+                    if norm == pat_norm or norm.startswith(pat_norm + "/"):
+                        return True
+                    if fnmatch.fnmatch(norm, pat_norm) or fnmatch.fnmatch(basename, pat_norm):
+                        return True
+                return False
+
             extracted_paths: List[str] = []
             deferred_dir_perms: List[Tuple[str, Optional[int], Optional[float]]] = []
             written_bytes = 0
@@ -995,75 +1028,79 @@ def decompress_archive(
 
             if not manifest.is_dir and len(manifest.files) == 1:
                 file_entry = manifest.files[0]
-                if output_dir:
-                    out_p = Path(output_dir).resolve()
-                    if out_p.is_dir() or str(output_dir).endswith(("/", "\\")) or out_p.suffix == "":
-                        target_file = out_p / file_entry.rel_path
+                if not should_extract(file_entry.rel_path):
+                    if not file_entry.is_symlink and file_entry.size > 0:
+                        skip_bytes(file_entry.size)
+                else:
+                    if output_dir:
+                        out_p = Path(output_dir).resolve()
+                        if out_p.is_dir() or str(output_dir).endswith(("/", "\\")) or out_p.suffix == "":
+                            target_file = out_p / file_entry.rel_path
+                        else:
+                            target_file = out_p
                     else:
-                        target_file = out_p
-                else:
-                    target_file = out_base / file_entry.rel_path
+                        target_file = out_base / file_entry.rel_path
 
-                target_file.parent.mkdir(parents=True, exist_ok=True)
-                target_str = str(target_file)
+                    target_file.parent.mkdir(parents=True, exist_ok=True)
+                    target_str = str(target_file)
 
-                if file_entry.is_symlink:
-                    _write_symlink_fast(target_str, file_entry.link_target, file_entry.mtime)
-                else:
-                    try:
-                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
-                    except OSError:
+                    if file_entry.is_symlink:
+                        _write_symlink_fast(target_str, file_entry.link_target, file_entry.mtime)
+                    else:
                         try:
-                            os.chmod(target_str, 0o777)
+                            fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
                         except OSError:
-                            pass
-                        try:
-                            if os.path.isdir(target_str) and not os.path.islink(target_str):
-                                shutil.rmtree(target_str, ignore_errors=True)
-                            else:
-                                os.unlink(target_str)
-                        except OSError:
-                            pass
-                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
-
-                    rem = file_entry.size
-                    try:
-                        while rem > 0:
-                            if cur_mv is None or cur_offset >= len(cur_mv):
-                                chunk = block_queue.get()
-                                if chunk is None:
-                                    if feeder_stats["error"]:
-                                        raise feeder_stats["error"]
-                                    raise EOFError("Unexpected EOF in archive")
-                                cur_block = chunk
-                                cur_mv = memoryview(chunk)
-                                cur_offset = 0
-
-                            take = min(rem, len(cur_mv) - cur_offset)
-                            _safe_write_all(fd, cur_mv[cur_offset : cur_offset + take])
-                            cur_offset += take
-                            rem -= take
-                            written_bytes += take
-                            maybe_report()
-                        try:
-                            os.utime(fd, (file_entry.mtime, file_entry.mtime))
-                        except (OSError, NotImplementedError, TypeError):
                             try:
-                                os.utime(target_str, (file_entry.mtime, file_entry.mtime))
+                                os.chmod(target_str, 0o777)
                             except OSError:
                                 pass
-                        if file_entry.mode & 0o222 == 0:
                             try:
-                                os.fchmod(fd, file_entry.mode)
-                            except (OSError, NotImplementedError, AttributeError):
+                                if os.path.isdir(target_str) and not os.path.islink(target_str):
+                                    shutil.rmtree(target_str, ignore_errors=True)
+                                else:
+                                    os.unlink(target_str)
+                            except OSError:
+                                pass
+                            fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
+
+                        rem = file_entry.size
+                        try:
+                            while rem > 0:
+                                if cur_mv is None or cur_offset >= len(cur_mv):
+                                    chunk = block_queue.get()
+                                    if chunk is None:
+                                        if feeder_stats["error"]:
+                                            raise feeder_stats["error"]
+                                        raise EOFError("Unexpected EOF in archive")
+                                    cur_block = chunk
+                                    cur_mv = memoryview(chunk)
+                                    cur_offset = 0
+
+                                take = min(rem, len(cur_mv) - cur_offset)
+                                _safe_write_all(fd, cur_mv[cur_offset : cur_offset + take])
+                                cur_offset += take
+                                rem -= take
+                                written_bytes += take
+                                maybe_report()
+                            try:
+                                os.utime(fd, (file_entry.mtime, file_entry.mtime))
+                            except (OSError, NotImplementedError, TypeError):
                                 try:
-                                    os.chmod(target_str, file_entry.mode)
+                                    os.utime(target_str, (file_entry.mtime, file_entry.mtime))
                                 except OSError:
                                     pass
-                    finally:
-                        os.close(fd)
+                            if file_entry.mode & 0o222 == 0:
+                                try:
+                                    os.fchmod(fd, file_entry.mode)
+                                except (OSError, NotImplementedError, AttributeError):
+                                    try:
+                                        os.chmod(target_str, file_entry.mode)
+                                    except OSError:
+                                        pass
+                        finally:
+                            os.close(fd)
 
-                extracted_paths.append(target_str)
+                    extracted_paths.append(target_str)
 
             else:
                 if output_dir:
@@ -1083,12 +1120,22 @@ def decompress_archive(
                 # Step 1: Upfront Directory Tree Materialization (Single Pass)
                 unique_dirs = set()
                 for file_entry in manifest.files:
+                    if not should_extract(file_entry.rel_path):
+                        continue
                     if file_entry.is_dir:
-                        unique_dirs.add(file_entry.rel_path)
+                        parts = file_entry.rel_path.split("/")
+                        curr = ""
+                        for part in parts:
+                            curr = (curr + "/" + part) if curr else part
+                            unique_dirs.add(curr)
                     else:
                         p_idx = file_entry.rel_path.rfind("/")
                         if p_idx != -1:
-                            unique_dirs.add(file_entry.rel_path[:p_idx])
+                            parts = file_entry.rel_path[:p_idx].split("/")
+                            curr = ""
+                            for part in parts:
+                                curr = (curr + "/" + part) if curr else part
+                                unique_dirs.add(curr)
 
                 sorted_dirs = sorted(unique_dirs, key=lambda d: (d.count("/"), len(d)))
                 for d in sorted_dirs:
@@ -1152,6 +1199,11 @@ def decompress_archive(
                         raise worker_errors[0]
                     if feeder_stats["error"]:
                         raise feeder_stats["error"]
+
+                    if not should_extract(file_entry.rel_path):
+                        if not file_entry.is_dir and not file_entry.is_symlink and file_entry.size > 0:
+                            skip_bytes(file_entry.size)
+                        continue
 
                     target_str = dest_root_str + file_entry.rel_path
 

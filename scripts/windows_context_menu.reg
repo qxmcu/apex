@@ -1,0 +1,86 @@
+Windows Registry Editor Version 5.00
+
+; ====================================================================
+; ApexCompress Windows Explorer Context Menu Integration
+; Adds right-click options to Compress with Apex, Extract, Test, and Repair
+; Ensure 'apex.exe' is located in your system PATH or update the paths below.
+; ====================================================================
+
+; --- Files: Right-click to compress ---
+[HKEY_CLASSES_ROOT\*\shell\ApexCompress]
+"MUIVerb"="Compress with Apex"
+"SubCommands"=""
+
+[HKEY_CLASSES_ROOT\*\shell\ApexCompress\shell\CompressBalanced]
+@="Compress (Balanced)"
+
+[HKEY_CLASSES_ROOT\*\shell\ApexCompress\shell\CompressBalanced\command]
+@="cmd.exe /k \"apex.exe compress \"%1\"\""
+
+[HKEY_CLASSES_ROOT\*\shell\ApexCompress\shell\CompressUltra]
+@="Compress (Ultra Density)"
+
+[HKEY_CLASSES_ROOT\*\shell\ApexCompress\shell\CompressUltra\command]
+@="cmd.exe /k \"apex.exe compress -m ultra \"%1\"\""
+
+[HKEY_CLASSES_ROOT\*\shell\ApexCompress\shell\CompressFast]
+@="Compress (Fast)"
+
+[HKEY_CLASSES_ROOT\*\shell\ApexCompress\shell\CompressFast\command]
+@="cmd.exe /k \"apex.exe compress -m fast \"%1\"\""
+
+[HKEY_CLASSES_ROOT\*\shell\ApexCompress\shell\CompressRecovery]
+@="Compress with Self-Healing Recovery Parity"
+
+[HKEY_CLASSES_ROOT\*\shell\ApexCompress\shell\CompressRecovery\command]
+@="cmd.exe /k \"apex.exe compress -r \"%1\"\""
+
+
+; --- Folders/Directories: Right-click to compress folder ---
+[HKEY_CLASSES_ROOT\Directory\shell\ApexCompress]
+"MUIVerb"="Compress with Apex"
+"SubCommands"=""
+
+[HKEY_CLASSES_ROOT\Directory\shell\ApexCompress\shell\CompressBalanced]
+@="Compress Folder (Balanced)"
+
+[HKEY_CLASSES_ROOT\Directory\shell\ApexCompress\shell\CompressBalanced\command]
+@="cmd.exe /k \"apex.exe compress \"%1\"\""
+
+[HKEY_CLASSES_ROOT\Directory\shell\ApexCompress\shell\CompressUltra]
+@="Compress Folder (Ultra Density)"
+
+[HKEY_CLASSES_ROOT\Directory\shell\ApexCompress\shell\CompressUltra\command]
+@="cmd.exe /k \"apex.exe compress -m ultra \"%1\"\""
+
+[HKEY_CLASSES_ROOT\Directory\shell\ApexCompress\shell\CompressRecovery]
+@="Compress Folder with Recovery Parity"
+
+[HKEY_CLASSES_ROOT\Directory\shell\ApexCompress\shell\CompressRecovery\command]
+@="cmd.exe /k \"apex.exe compress -r \"%1\"\""
+
+
+; --- .apx Archives: Right-click to Extract, Test, or Repair ---
+[HKEY_CLASSES_ROOT\.apx]
+@="ApexArchive"
+
+[HKEY_CLASSES_ROOT\ApexArchive]
+@="Apex Compressed Archive"
+
+[HKEY_CLASSES_ROOT\ApexArchive\shell\open]
+@="Extract with Apex"
+
+[HKEY_CLASSES_ROOT\ApexArchive\shell\open\command]
+@="cmd.exe /k \"apex.exe decompress \"%1\"\""
+
+[HKEY_CLASSES_ROOT\ApexArchive\shell\ApexTest]
+@="Test Archive Integrity"
+
+[HKEY_CLASSES_ROOT\ApexArchive\shell\ApexTest\command]
+@="cmd.exe /k \"apex.exe test \"%1\"\""
+
+[HKEY_CLASSES_ROOT\ApexArchive\shell\ApexRepair]
+@="Repair Damaged Archive (Self-Healing)"
+
+[HKEY_CLASSES_ROOT\ApexArchive\shell\ApexRepair\command]
+@="cmd.exe /k \"apex.exe repair \"%1\"\""

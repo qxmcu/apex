@@ -94,15 +94,16 @@
         <a href="#audit" class="hover:text-brand-acid transition-colors">01 // Architectural Flaws</a>
         <a href="#engine" class="hover:text-brand-acid transition-colors">02 // The Pipeline</a>
         <a href="#benchmarks" class="hover:text-brand-acid transition-colors">03 // Verification Data</a>
-        <a href="#license" class="hover:text-brand-acid transition-colors">04 // Open Source Freedom</a>
-        <a href="#install" class="hover:text-brand-acid transition-colors">05 // Binaries</a>
+        <a href="#tooling" class="hover:text-brand-acid transition-colors">04 // Ecosystem & Tooling</a>
+        <a href="#license" class="hover:text-brand-acid transition-colors">05 // Open Source</a>
+        <a href="#install" class="hover:text-brand-acid transition-colors">06 // Binaries</a>
       </nav>
 
       <!-- Terminal Status & Action -->
       <div class="flex items-center gap-4">
         <div class="hidden sm:flex items-center gap-2 font-mono text-[11px] px-2.5 py-1 rounded bg-brand-panel border border-brand-border text-brand-muted">
           <span class="w-1.5 h-1.5 rounded-full bg-brand-acid animate-pulse"></span>
-          <span>v1.0.1-STABLE</span>
+          <span>v1.1.0-STABLE</span>
         </div>
         <a href="https://github.com/qxmcu/apex" target="_blank" rel="noopener noreferrer"
            class="inline-flex items-center gap-2 px-4 py-2 text-xs font-mono font-semibold uppercase tracking-wider bg-[#EDEDEC] text-black hover:bg-brand-acid transition-colors">
@@ -550,13 +551,107 @@
     </div>
   </section>
 
-  <!-- Section 04: 100% Free & Open Source Freedom (No Dual-Pricing) -->
+  <!-- Section 04: Ecosystem & Developer Tooling -->
+  <section id="tooling" class="border-b border-hairline py-16 sm:py-20 bg-[#07080B]">
+    <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 sm:pb-8 border-b border-hairline gap-6">
+        <div>
+          <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">04 // ECOSYSTEM & DEVELOPER TOOLING</span>
+          <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">Engineered for Modern Workflows</h2>
+        </div>
+        <p class="text-sm text-brand-muted max-w-md font-mono">
+          From microsecond archive diffing to zero-copy selective extraction and native Python integration.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-mono text-xs">
+        
+        <!-- Feature 1: Selective Extraction -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-3">
+              <span class="font-bold uppercase tracking-wider">Selective Extraction</span>
+              <i data-lucide="filter" class="w-4 h-4"></i>
+            </div>
+            <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
+              Extract specific files or glob patterns directly without decompressing skipped files to disk or allocating redundant memory buffers.
+            </p>
+            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">apex x archive.apx -i "*.json"
+apex x vault.apx path/to/file</pre>
+          </div>
+          <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
+            Zero-copy memoryview skipping • SHA-256 verified
+          </div>
+        </div>
+
+        <!-- Feature 2: Archive Diffing -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-3">
+              <span class="font-bold uppercase tracking-wider">Archive Diff Tool</span>
+              <i data-lucide="git-compare" class="w-4 h-4"></i>
+            </div>
+            <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
+              Inspect changes between two archives instantly. Compares manifests, added/deleted files, modifications, and net byte deltas in milliseconds.
+            </p>
+            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">apex diff release_v1.apx v2.apx
+apex diff a.apx b.apx --json</pre>
+          </div>
+          <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
+            Header-only traversal • Machine-readable JSON
+          </div>
+        </div>
+
+        <!-- Feature 3: Python SDK -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-3">
+              <span class="font-bold uppercase tracking-wider">Python Library SDK</span>
+              <i data-lucide="code" class="w-4 h-4"></i>
+            </div>
+            <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
+              Direct Python SDK bindings for pipelines, automated systems, and in-memory byte buffer tournaments without spawning subprocesses.
+            </p>
+            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">import apex
+apex.compress("data", "out.apx")
+apex.compress_bytes(payload)</pre>
+          </div>
+          <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
+            Fully typed • In-memory byte streaming
+          </div>
+        </div>
+
+        <!-- Feature 4: Shell & OS Integration -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-3">
+              <span class="font-bold uppercase tracking-wider">Shell & OS Integration</span>
+              <i data-lucide="terminal" class="w-4 h-4"></i>
+            </div>
+            <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
+              Native tab-completion scripts for Bash, Zsh, and Fish, plus Windows Explorer context menu registry script and macOS Finder Quick Actions.
+            </p>
+            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">apex completions zsh
+reg import windows_context.reg</pre>
+          </div>
+          <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
+            Windows context menu • macOS Finder • Shell scripts
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Section 05: 100% Free & Open Source Freedom (No Dual-Pricing) -->
   <section id="license" class="border-b border-hairline py-16 sm:py-20 bg-brand-panel">
     <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
       
       <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 sm:pb-8 border-b border-hairline gap-6">
         <div>
-          <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">04 // OPEN SOURCE & FREEDOM</span>
+          <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">05 // OPEN SOURCE & FREEDOM</span>
           <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">100% Free. GNU GPLv3 Licensed.</h2>
         </div>
         <p class="text-sm text-brand-muted max-w-md font-mono">
@@ -631,13 +726,13 @@
     </div>
   </section>
 
-  <!-- Section 05: Installation & Binary Downloads -->
+  <!-- Section 06: Installation & Binary Downloads -->
   <section id="install" class="py-16 sm:py-20 bg-[#090A0F]">
     <div class="max-w-[1440px] mx-auto px-6 sm:px-10">
       
       <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 sm:pb-8 border-b border-hairline gap-6">
         <div>
-          <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">05 // STANDALONE DEPLOYMENT</span>
+          <span class="font-mono text-xs uppercase tracking-widest text-brand-acid font-bold">06 // STANDALONE DEPLOYMENT</span>
           <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">Native Executables</h2>
         </div>
         <p class="text-sm text-brand-muted max-w-md font-mono">
@@ -652,17 +747,17 @@
           <div>
             <div class="flex justify-between items-center text-xs text-brand-muted mb-4">
               <span class="text-white font-bold uppercase">macOS (Darwin)</span>
-              <span>14 MB &bull; v1.0.1</span>
+              <span>14 MB &bull; v1.1.0</span>
             </div>
             <p class="text-xs text-brand-muted leading-normal mb-6">
               Verified on macOS 12+ (x86_64 and Apple Silicon via Rosetta/Native).
             </p>
             <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">
-curl -LO https://github.com/qxmcu/apex/releases/download/v1.0.1/apex-v1.0.1-darwin-x86_64.tar.gz
-tar -xzf apex-v1.0.1-darwin-x86_64.tar.gz
+curl -LO https://github.com/qxmcu/apex/releases/download/v1.1.0/apex-v1.1.0-darwin-x86_64.tar.gz
+tar -xzf apex-v1.1.0-darwin-x86_64.tar.gz
 chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           </div>
-          <a href="https://github.com/qxmcu/apex/releases/download/v1.0.1/apex-v1.0.1-darwin-x86_64.tar.gz" 
+          <a href="https://github.com/qxmcu/apex/releases/download/v1.1.0/apex-v1.1.0-darwin-x86_64.tar.gz" 
              class="mt-8 block text-center py-2.5 px-4 bg-brand-acid hover:bg-white text-black font-bold text-xs uppercase tracking-wider transition-colors">
             Download macOS Binary
           </a>
@@ -673,17 +768,17 @@ chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           <div>
             <div class="flex justify-between items-center text-xs text-brand-muted mb-4">
               <span class="text-white font-bold uppercase">Linux (CLI)</span>
-              <span>GLIBC 2.28+</span>
+              <span>GLIBC 2.28+ &bull; v1.1.0</span>
             </div>
             <p class="text-xs text-brand-muted leading-normal mb-6">
               Ubuntu, Debian, Fedora, Arch, Alpine. Standalone zero-dependency native ELF executable.
             </p>
             <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">
-curl -LO https://github.com/qxmcu/apex/releases/download/v1.0.1/apex-v1.0.1-linux-x86_64.tar.gz
-tar -xzf apex-v1.0.1-linux-x86_64.tar.gz
+curl -LO https://github.com/qxmcu/apex/releases/download/v1.1.0/apex-v1.1.0-linux-x86_64.tar.gz
+tar -xzf apex-v1.1.0-linux-x86_64.tar.gz
 chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           </div>
-          <a href="https://github.com/qxmcu/apex/releases/download/v1.0.1/apex-v1.0.1-linux-x86_64.tar.gz" 
+          <a href="https://github.com/qxmcu/apex/releases/download/v1.1.0/apex-v1.1.0-linux-x86_64.tar.gz" 
              class="mt-8 block text-center py-2.5 px-4 bg-brand-acid hover:bg-white text-black font-bold text-xs uppercase tracking-wider transition-colors">
             Download Linux Binary
           </a>
@@ -694,17 +789,17 @@ chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           <div>
             <div class="flex justify-between items-center text-xs text-brand-muted mb-4">
               <span class="text-white font-bold uppercase">Windows 10 / 11</span>
-              <span>v1.0.1 Patched</span>
+              <span>v1.1.0-STABLE</span>
             </div>
             <p class="text-xs text-brand-muted leading-normal mb-6">
-              Hotfix verified: UTF-8 console output fix, O_BINARY CRLF prevention, and os.utime compatibility.
+              Includes Explorer right-click context menu integration script, UTF-8 console output, and O_BINARY safety.
             </p>
             <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">
-curl -LO https://github.com/qxmcu/apex/releases/download/v1.0.1/apex-v1.0.1-windows-x86_64.zip
-tar -xf apex-v1.0.1-windows-x86_64.zip
+curl -LO https://github.com/qxmcu/apex/releases/download/v1.1.0/apex-v1.1.0-windows-x86_64.zip
+tar -xf apex-v1.1.0-windows-x86_64.zip
 .\apex.exe --help</pre>
           </div>
-          <a href="https://github.com/qxmcu/apex/releases/download/v1.0.1/apex-v1.0.1-windows-x86_64.zip" 
+          <a href="https://github.com/qxmcu/apex/releases/download/v1.1.0/apex-v1.1.0-windows-x86_64.zip" 
              class="mt-8 block text-center py-2.5 px-4 bg-brand-acid hover:bg-white text-black font-bold text-xs uppercase tracking-wider transition-colors">
             Download Windows Binary
           </a>
@@ -752,21 +847,13 @@ tar -xf apex-v1.0.1-windows-x86_64.zip
         </div>
 
         <div>
-          <div class="text-white font-bold uppercase tracking-wider mb-4">Repository Status</div>
-          <div class="p-3 bg-brand-panel border border-brand-border space-y-2 text-[11px]">
-            <div class="flex justify-between border-b border-hairline pb-1 mb-1">
-              <span>Tests:</span>
-              <a href="https://github.com/qxmcu/apex/actions" target="_blank" class="text-brand-acid hover:text-white transition-colors">32 / 32 passing</a>
+          <div class="text-white font-bold uppercase tracking-wider mb-4">System Telemetry</div>
+          <div class="space-y-2 text-[11px]">
+            <div class="flex justify-between">
+              <span>Determinism:</span>
+              <span class="text-brand-acid font-bold">100% Bit-Exact</span>
             </div>
             <div class="flex justify-between">
-              <span>Windows CI:</span>
-              <a href="https://github.com/qxmcu/apex/actions" target="_blank" class="text-brand-acid hover:text-white transition-colors">✓</a>
-            </div>
-            <div class="flex justify-between">
-              <span>Linux CI:</span>
-              <a href="https://github.com/qxmcu/apex/actions" target="_blank" class="text-brand-acid hover:text-white transition-colors">✓</a>
-            </div>
-            <div class="flex justify-between border-b border-hairline pb-1 mb-1">
               <span>macOS CI:</span>
               <a href="https://github.com/qxmcu/apex/actions" target="_blank" class="text-brand-acid hover:text-white transition-colors">✓</a>
             </div>
@@ -780,7 +867,7 @@ tar -xf apex-v1.0.1-windows-x86_64.zip
             </div>
             <div class="flex justify-between">
               <span>Latest release:</span>
-              <a href="https://github.com/qxmcu/apex/releases" target="_blank" class="text-white hover:text-brand-acid transition-colors">v1.0.1</a>
+              <a href="https://github.com/qxmcu/apex/releases" target="_blank" class="text-white hover:text-brand-acid transition-colors">v1.1.0</a>
             </div>
             <div class="flex justify-between">
               <span>License:</span>

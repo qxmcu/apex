@@ -2,6 +2,11 @@ name: Build Linux Standalone Executable
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag (e.g. v1.1.0)'
+        required: false
+        default: 'v1.1.0'
 
 permissions:
   contents: write
@@ -45,26 +50,29 @@ jobs:
 
       - name: Package Linux Binary and Generate Checksum
         run: |
+          VERSION="${{ github.event.inputs.version || 'v1.1.0' }}"
+          echo "Building package for version ${VERSION}..."
           mkdir -p release-pkg
           cp apex-py/dist/apex release-pkg/apex
           cd release-pkg
-          tar -czvf ../apex-v1.0.1-linux-x86_64.tar.gz apex
+          tar -czvf "../apex-${VERSION}-linux-x86_64.tar.gz" apex
           cd ..
-          sha256sum apex-v1.0.1-linux-x86_64.tar.gz > apex-v1.0.1-linux-x86_64.tar.gz.sha256
+          sha256sum "apex-${VERSION}-linux-x86_64.tar.gz" > "apex-${VERSION}-linux-x86_64.tar.gz.sha256"
           echo "Package created successfully:"
-          ls -la apex-v1.0.1-linux*
-          cat apex-v1.0.1-linux-x86_64.tar.gz.sha256
+          ls -la apex-*-linux*
+          cat "apex-${VERSION}-linux-x86_64.tar.gz.sha256"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: apex-linux-x86_64
           path: |
-            apex-v1.0.1-linux-x86_64.tar.gz
-            apex-v1.0.1-linux-x86_64.tar.gz.sha256
+            apex-*-linux-x86_64.tar.gz
+            apex-*-linux-x86_64.tar.gz.sha256
 
-      - name: Upload to GitHub Release v1.0.1
+      - name: Upload to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload v1.0.1 apex-v1.0.1-linux-x86_64.tar.gz apex-v1.0.1-linux-x86_64.tar.gz.sha256 --clobber
+          VERSION="${{ github.event.inputs.version || 'v1.1.0' }}"
+          gh release upload "${VERSION}" apex-${VERSION}-linux-x86_64.tar.gz apex-${VERSION}-linux-x86_64.tar.gz.sha256 --clobber

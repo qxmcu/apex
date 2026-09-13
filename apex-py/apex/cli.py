@@ -29,6 +29,8 @@ from apex.archive import (
     test_archive,
 )
 from apex.benchmark import format_bytes, run_benchmark
+from apex.completions import generate_completions
+from apex.diff import diff_archives, format_diff_report
 from apex.engine import Mode
 
 # ANSI Colors
@@ -51,7 +53,7 @@ def print_banner():
 / /_\\\\|  __/ /_     | |/ /_\\\\|  __/| | | | | | |_) | _   
 \\____/ \\___|\\__|    |_|\\____/ \\___||_| |_| |_| .__/ (_)  
                                              |_|         
-{RESET}{DIM}  Adaptive Multi-Engine Tournament Compression System v1.0.1{RESET}
+{RESET}{DIM}  Adaptive Multi-Engine Tournament Compression System v1.1.0{RESET}
 """
     print(banner)
 
@@ -156,9 +158,18 @@ def cmd_decompress(args):
         print(f"{RED}Error: Archive '{args.archive}' not found.{RESET}", file=sys.stderr)
         sys.exit(1)
 
+    patterns = []
+    if getattr(args, "include", None):
+        patterns.extend(args.include)
+    if getattr(args, "files", None):
+        patterns.extend(args.files)
+    include_patterns = patterns if patterns else None
+
     print(f"{BOLD}Decompressing:{RESET} {archive_path}")
     if args.dest:
         print(f"{BOLD}Destination:{RESET}   {args.dest}")
+    if include_patterns:
+        print(f"{BOLD}Selective Patterns:{RESET} {CYAN}{', '.join(include_patterns)}{RESET}")
 
     def on_progress(done_bytes: int, total_bytes: int, files_done: int):
         pct = (done_bytes / total_bytes * 100.0) if total_bytes > 0 else 100.0
@@ -176,6 +187,7 @@ def cmd_decompress(args):
             str(archive_path),
             output_dir=args.dest,
             password=args.password,
+            include_patterns=include_patterns,
             progress_callback=on_progress if not quiet else None,
         )
     except Exception as e:
@@ -192,6 +204,38 @@ def cmd_decompress(args):
     print(f"  {BOLD}Time Elapsed:{RESET}     {res['elapsed']:.2f}s")
     print(f"  {BOLD}Integrity:{RESET}        {GREEN}100% Bit-Exact SHA-256 Verified{RESET}")
     print("=" * 60)
+
+
+def cmd_diff(args):
+    archive1 = Path(args.archive1).resolve()
+    archive2 = Path(args.archive2).resolve()
+    if not archive1.exists():
+        print(f"{RED}Error: First archive '{args.archive1}' not found.{RESET}", file=sys.stderr)
+        sys.exit(1)
+    if not archive2.exists():
+        print(f"{RED}Error: Second archive '{args.archive2}' not found.{RESET}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        res = diff_archives(str(archive1), str(archive2), password=args.password)
+    except Exception as e:
+        print(f"{RED}Diff error: {e}{RESET}", file=sys.stderr)
+        sys.exit(1)
+
+    if getattr(args, "json", False):
+        import json
+        print(json.dumps(res, indent=2))
+    else:
+        print(format_diff_report(res))
+
+
+def cmd_completions(args):
+    try:
+        script = generate_completions(args.shell)
+        sys.stdout.write(script)
+    except Exception as e:
+        print(f"{RED}Error generating completions: {e}{RESET}", file=sys.stderr)
+        sys.exit(1)
 
 
 def cmd_test(args):
@@ -347,7 +391,7 @@ def main():
         description="ApexCompress: The Adaptive Tournament Multi-Engine Compression Tool.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("-V", "--version", action="version", version="%(prog)s 1.0.1")
+    parser.add_argument("-V", "--version", action="version", version="%(prog)s 1.1.0")
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
     # Compress
@@ -366,10 +410,25 @@ def main():
     # Decompress
     p_decomp = subparsers.add_parser("decompress", aliases=["x", "extract"], help="Decompress an .apx archive")
     p_decomp.add_argument("archive", help="Path to .apx archive")
+    p_decomp.add_argument("files", nargs="*", help="Specific files or paths to selectively extract")
     p_decomp.add_argument("-d", "--dest", help="Destination folder or file path")
     p_decomp.add_argument("-p", "--password", help="Password for encrypted archive")
+    p_decomp.add_argument("-i", "--include", action="append", help="Include pattern/glob for selective extraction (e.g. -i '*.json')")
     p_decomp.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
     p_decomp.set_defaults(func=cmd_decompress)
+
+    # Diff
+    p_diff = subparsers.add_parser("diff", aliases=["d"], help="Compare manifests and contents between two .apx archives")
+    p_diff.add_argument("archive1", help="First .apx archive")
+    p_diff.add_argument("archive2", help="Second .apx archive")
+    p_diff.add_argument("-p", "--password", help="Password if archive is encrypted")
+    p_diff.add_argument("--json", action="store_true", help="Output diff as JSON")
+    p_diff.set_defaults(func=cmd_diff)
+
+    # Shell Completions
+    p_comp_gen = subparsers.add_parser("completions", help="Generate shell completions script (bash, zsh, fish)")
+    p_comp_gen.add_argument("shell", choices=["bash", "zsh", "fish"], help="Target shell")
+    p_comp_gen.set_defaults(func=cmd_completions)
 
     # Test
     p_test = subparsers.add_parser("test", aliases=["t"], help="Test archive integrity without writing to disk")
@@ -409,9 +468,10 @@ def main():
     # Smart auto-detection if user passed a path without specifying a subcommand
     subcommands = {
         "compress", "c", "decompress", "x", "extract",
+        "diff", "d", "completions",
         "test", "t", "list", "l", "benchmark", "b", "info", "i",
         "repair", "fix", "heal",
-        "-h", "--help", "-v", "--version"
+        "-h", "--help", "-v", "-V", "--version"
     }
     first_arg = sys.argv[1]
     if first_arg not in subcommands and not first_arg.startswith("-"):

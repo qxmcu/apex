@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "apexcompress"
-version = "1.1.0"
+version = "1.2.0"
 description = "Adaptive tournament multi-engine compression container format with authenticated encryption and Reed-Solomon recovery"
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "Apache-2.0" }
+license = { text = "GPL-3.0-or-later" }
 authors = [
     { name = "Apex Compression Lab" }
 ]

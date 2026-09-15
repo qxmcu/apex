@@ -23,6 +23,8 @@ venv/
 # Archives & Temporary Data
 *.apx
 *.log
+*.tar.gz
+*.sha256
 
 # OS artifacts
 .DS_Store
@@ -45,3 +47,8 @@ Thumbs.db
 
 # Notes/Drafts
 REDDIT_POST.md
+DESCRIPTION.md
+SHORT_DESCRIPTION.md
+build_and_upload.sh
+release_notes.md
+release_notes_v1.0.1_updated*.md

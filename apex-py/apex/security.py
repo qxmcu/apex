@@ -1,8 +1,8 @@
 """
 ApexCompress Security & Authenticated Encryption Suite.
 Provides PBKDF2 key derivation (100,000 rounds of SHA-256)
-and authenticated encryption (Encrypt-then-HMAC-SHA256) with AES-256-CTR
-hardware acceleration and ChaCha20 pure-Python fallback.
+and authenticated encryption (Encrypt-then-HMAC-SHA256) with
+portable in-process ChaCha20 (RFC 7539 / RFC 8439) and optional AES-256-CTR.
 """
 
 import hashlib
@@ -10,12 +10,17 @@ import hmac
 import os
 import struct
 import subprocess
-from typing import Tuple
+from typing import Optional, Tuple
 
 PBKDF2_ITERATIONS = 100_000
 SALT_LEN = 16
 IV_LEN = 16
 TAG_LEN = 32
+
+# Explicit Container Cipher Identifiers
+CIPHER_CHACHA20_HMAC_SHA256 = 0x01
+CIPHER_AES256_CTR_HMAC = 0x02
+CIPHER_DEFAULT = CIPHER_CHACHA20_HMAC_SHA256
 
 
 def derive_keys(password: str, salt: bytes) -> Tuple[bytes, bytes]:
@@ -78,10 +83,10 @@ def _chacha20_crypt(data: bytes, key: bytes, nonce: bytes, counter: int = 1) -> 
 
 
 def _aes256_crypt(data: bytes, key: bytes, iv: bytes, decrypt: bool = False) -> bytes:
-    """Uses native /usr/bin/openssl AES-256-CTR with hardware AES-NI if present."""
+    """Uses native /usr/bin/openssl AES-256-CTR if present, with ChaCha20 fallback."""
     if len(data) == 0:
         return b""
-    cmd = ["/usr/bin/openssl", "enc", "-aes-256-ctr", "-K", key.hex(), "-iv", iv.hex()]
+    cmd = ["openssl", "enc", "-aes-256-ctr", "-K", key.hex(), "-iv", iv.hex()]
     if decrypt:
         cmd.insert(2, "-d")
     try:
@@ -96,37 +101,59 @@ def _aes256_crypt(data: bytes, key: bytes, iv: bytes, decrypt: bool = False) -> 
             return out
     except Exception:
         pass
-    # Fallback to ChaCha20
+    # Fallback to portable in-process ChaCha20
     nonce = iv[:12]
     return _chacha20_crypt(data, key, nonce)
 
 
-def encrypt_payload(data: bytes, enc_key: bytes, mac_key: bytes) -> bytes:
+def encrypt_payload(data: bytes, enc_key: bytes, mac_key: bytes, cipher_id: int = CIPHER_DEFAULT) -> bytes:
     """
-    Encrypts data using AES-256-CTR / ChaCha20 and appends HMAC-SHA256 tag.
-    Output: [16 bytes IV] + [32 bytes HMAC-SHA256] + [Ciphertext]
+    Encrypts data using an authenticated cipher with explicit cipher identifier.
+    Format: [1 byte cipher_id] + [16 bytes IV] + [32 bytes HMAC-SHA256] + [Ciphertext]
     """
     iv = os.urandom(IV_LEN)
-    ciphertext = _aes256_crypt(data, enc_key, iv, decrypt=False)
-    mac = hmac.new(mac_key, iv + ciphertext, digestmod=hashlib.sha256).digest()
-    return iv + mac + ciphertext
+    if cipher_id == CIPHER_CHACHA20_HMAC_SHA256:
+        ciphertext = _chacha20_crypt(data, enc_key, iv[:12])
+    elif cipher_id == CIPHER_AES256_CTR_HMAC:
+        ciphertext = _aes256_crypt(data, enc_key, iv, decrypt=False)
+    else:
+        raise ValueError(f"Unsupported cipher ID: {cipher_id}")
+
+    header = bytes([cipher_id]) + iv
+    mac = hmac.new(mac_key, header + ciphertext, digestmod=hashlib.sha256).digest()
+    return header + mac + ciphertext
 
 
 def decrypt_payload(payload: bytes, enc_key: bytes, mac_key: bytes) -> bytes:
     """
-    Verifies HMAC-SHA256 authentication tag and decrypts ciphertext.
-    Raises ValueError if password is wrong or ciphertext has been tampered with.
+    Verifies HMAC-SHA256 authentication tag and decrypts ciphertext using the
+    recorded cipher ID, with automatic fallback for legacy archives.
     """
-    if len(payload) < IV_LEN + TAG_LEN:
-        raise ValueError("Corrupted encrypted payload: truncated data.")
+    # 1. New v1.2 format with explicit cipher_id prefix:
+    if len(payload) >= 1 + IV_LEN + TAG_LEN:
+        c_id = payload[0]
+        if c_id in (CIPHER_CHACHA20_HMAC_SHA256, CIPHER_AES256_CTR_HMAC):
+            header = payload[:1 + IV_LEN]
+            iv = payload[1:1 + IV_LEN]
+            tag = payload[1 + IV_LEN:1 + IV_LEN + TAG_LEN]
+            ciphertext = payload[1 + IV_LEN + TAG_LEN:]
+            expected_mac = hmac.new(mac_key, header + ciphertext, digestmod=hashlib.sha256).digest()
+            if hmac.compare_digest(tag, expected_mac):
+                if c_id == CIPHER_CHACHA20_HMAC_SHA256:
+                    return _chacha20_crypt(ciphertext, enc_key, iv[:12])
+                else:
+                    return _aes256_crypt(ciphertext, enc_key, iv, decrypt=True)
 
-    iv = payload[:IV_LEN]
-    tag = payload[IV_LEN:IV_LEN + TAG_LEN]
-    ciphertext = payload[IV_LEN + TAG_LEN:]
+    # 2. Legacy v1.0/v1.1 format: [16B IV] + [32B MAC] + [Ciphertext]
+    if len(payload) >= IV_LEN + TAG_LEN:
+        iv = payload[:IV_LEN]
+        tag = payload[IV_LEN:IV_LEN + TAG_LEN]
+        ciphertext = payload[IV_LEN + TAG_LEN:]
+        expected_mac = hmac.new(mac_key, iv + ciphertext, digestmod=hashlib.sha256).digest()
+        if hmac.compare_digest(tag, expected_mac):
+            try:
+                return _chacha20_crypt(ciphertext, enc_key, iv[:12])
+            except Exception:
+                return _aes256_crypt(ciphertext, enc_key, iv, decrypt=True)
 
-    expected_mac = hmac.new(mac_key, iv + ciphertext, digestmod=hashlib.sha256).digest()
-    if not hmac.compare_digest(tag, expected_mac):
-        raise ValueError("Decryption failed: Incorrect password or corrupted archive!")
-
-    plaintext = _aes256_crypt(ciphertext, enc_key, iv, decrypt=True)
-    return plaintext
+    raise ValueError("Decryption failed: Incorrect password or corrupted archive!")

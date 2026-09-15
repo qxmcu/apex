@@ -20,7 +20,7 @@ from apex.benchmark import run_benchmark
 from apex.diff import diff_archives
 from apex.engine import Mode, compress_chunk, decompress_chunk
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __author__ = "Apex Compression Lab"
 
 
@@ -33,6 +33,7 @@ def compress(
     recovery: bool = False,
     cdc: bool = False,
     progress_callback: Optional[Any] = None,
+    exclude: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Compress a file or folder into an .apx archive."""
     if isinstance(mode, str):
@@ -48,6 +49,7 @@ def compress(
         recovery=recovery,
         cdc=cdc,
         progress_callback=progress_callback,
+        exclude_patterns=exclude,
     )
 
 
@@ -100,12 +102,16 @@ def info(file_path: str):
     return analyze_file(str(file_path))
 
 
-def benchmark(data_or_path: Union[bytes, str], max_sample_mb: float = 16.0):
+def benchmark(data_or_path: Union[bytes, str], max_sample_mb: Optional[float] = 16.0):
     """Run tournament benchmark shootout against standard archivers."""
     if isinstance(data_or_path, str):
-        limit = int(max_sample_mb * 1024 * 1024)
-        with open(data_or_path, "rb") as f:
-            data = f.read(limit)
+        if max_sample_mb is not None:
+            limit = int(max_sample_mb * 1024 * 1024)
+            with open(data_or_path, "rb") as f:
+                data = f.read(limit)
+        else:
+            with open(data_or_path, "rb") as f:
+                data = f.read()
     else:
         data = data_or_path
     return run_benchmark(data)

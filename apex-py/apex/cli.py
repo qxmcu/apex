@@ -53,7 +53,7 @@ def print_banner():
 / /_\\\\|  __/ /_     | |/ /_\\\\|  __/| | | | | | |_) | _   
 \\____/ \\___|\\__|    |_|\\____/ \\___||_| |_| |_| .__/ (_)  
                                              |_|         
-{RESET}{DIM}  Adaptive Multi-Engine Tournament Compression System v1.1.0{RESET}
+{RESET}{DIM}  Adaptive Multi-Engine Tournament Compression System v1.2.0{RESET}
 """
     print(banner)
 
@@ -91,6 +91,8 @@ def cmd_compress(args):
     print(f"{BOLD}Compressing:{RESET}  {source}")
     print(f"{BOLD}Destination:{RESET}  {out_path}")
     print(f"{BOLD}Preset Mode:{RESET}  {CYAN}{mode.value.upper()}{RESET} (Block size: {display_block_mb:g} MB)")
+    if getattr(args, "exclude", None):
+        print(f"{BOLD}Exclusions:{RESET}   {YELLOW}{', '.join(args.exclude)}{RESET}")
     print(f"{DIM}Running tournament optimization across CPU cores...{RESET}\n")
 
     last_p_time = 0.0
@@ -119,6 +121,7 @@ def cmd_compress(args):
             recovery=args.recovery,
             cdc=getattr(args, "cdc", False),
             progress_callback=on_progress if not args.quiet else None,
+            exclude_patterns=getattr(args, "exclude", None),
         )
     except Exception as e:
         print(f"\n{RED}Compression failed: {e}{RESET}", file=sys.stderr)
@@ -139,7 +142,7 @@ def cmd_compress(args):
     print(f"  {BOLD}Time Elapsed:{RESET}     {res['elapsed']:.2f}s ({speed_mb:.1f} MB/s)")
     print(f"  {BOLD}Stream SHA-256:{RESET}   {DIM}{res['sha256']}{RESET}")
     if res.get("encrypted"):
-        print(f"  {BOLD}Security:{RESET}        {GREEN}Authenticated Encryption (AES-256-CTR + HMAC-SHA256){RESET}")
+        print(f"  {BOLD}Security:{RESET}        {GREEN}Authenticated Encryption (PBKDF2 + ChaCha20/AES + HMAC-SHA256){RESET}")
     if res.get("recovery"):
         print(f"  {BOLD}Self-Healing:{RESET}    {GREEN}Reed-Solomon Parity Records Attached{RESET}")
     print("=" * 60)
@@ -275,7 +278,7 @@ def cmd_list(args):
     print(f"{BOLD}Archive:{RESET}     {archive_path.name}")
     print(f"{BOLD}Type:{RESET}        {'Directory / Solid Archive' if manifest.is_dir else 'Single File'}")
     print(f"{BOLD}Block Size:{RESET}  {block_size // (1024*1024)} MB")
-    print(f"{BOLD}Encrypted:{RESET}   {'Yes (AES-256-CTR + HMAC-SHA256)' if (flags & FLAG_ENCRYPTED) else 'No'}")
+    print(f"{BOLD}Encrypted:{RESET}   {'Yes (Authenticated Encryption: ChaCha20/AES + HMAC-SHA256)' if (flags & FLAG_ENCRYPTED) else 'No'}")
     print(f"{BOLD}Self-Healing:{RESET}{'Yes (Reed-Solomon Parity)' if (flags & FLAG_RECOVERY) else 'No'}")
     print(f"{BOLD}Total Files:{RESET} {len(manifest.files)}")
     print(f"{BOLD}Total Size:{RESET}  {format_bytes(manifest.total_uncompressed_size)}\n")
@@ -328,12 +331,14 @@ def cmd_benchmark(args):
         sys.exit(1)
 
     size = file_path.stat().st_size
-    print(f"{BOLD}Reading sample from:{RESET} {file_path} ({format_bytes(size)})")
-
-    # Read up to sample limit (default 16MB)
-    sample_limit = int(args.max_sample_mb * 1024 * 1024)
-    with open(file_path, "rb") as f:
-        data = f.read(sample_limit)
+    if getattr(args, "full", False):
+        data = file_path.read_bytes()
+        print(f"{BOLD}Reading sample from:{RESET} {file_path} ({format_bytes(len(data))}, 100% full dataset)")
+    else:
+        sample_limit = int(args.max_sample_mb * 1024 * 1024)
+        with open(file_path, "rb") as f:
+            data = f.read(sample_limit)
+        print(f"{BOLD}Reading sample from:{RESET} {file_path} (Sample: {format_bytes(len(data))} / Total: {format_bytes(size)})")
 
     print(f"{DIM}Running tournament shootout against Gzip, Bzip2, XZ, Zstandard, Brotli...{RESET}\n")
     results = run_benchmark(data)
@@ -391,7 +396,7 @@ def main():
         description="ApexCompress: The Adaptive Tournament Multi-Engine Compression Tool.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("-V", "--version", action="version", version="%(prog)s 1.1.0")
+    parser.add_argument("-V", "--version", action="version", version="%(prog)s 1.2.0")
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
     # Compress
@@ -402,6 +407,7 @@ def main():
     p_comp.add_argument("-b", "--block-size", type=float, default=None, help="Block size in megabytes (default: 4 MB for fast, 2 MB for balanced/ultra)")
     p_comp.add_argument("-p", "--password", help="Encrypt archive with AES-256-CTR & HMAC-SHA256")
     p_comp.add_argument("-r", "--recovery", action="store_true", help="Embed Reed-Solomon self-healing parity records")
+    p_comp.add_argument("-e", "--exclude", action="append", help="Exclude pattern or folder (e.g. -e '.git' -e 'node_modules' -e '*.tmp')")
     p_comp.add_argument("--cdc", action="store_true", help="Enable Content-Defined Chunking for game patches and delta updates")
     p_comp.add_argument("-v", "--verbose", action="store_true", help="Print block-level tournament winners")
     p_comp.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
@@ -453,6 +459,7 @@ def main():
     p_bench = subparsers.add_parser("benchmark", aliases=["b"], help="Shootout benchmark against Gzip, Bzip2, XZ, Zstd, Brotli")
     p_bench.add_argument("file", help="File to benchmark")
     p_bench.add_argument("--max-sample-mb", type=float, default=16.0, help="Max sample size to benchmark in MB")
+    p_bench.add_argument("--full", action="store_true", help="Benchmark entire file without 16 MB sample limit")
     p_bench.set_defaults(func=cmd_benchmark)
 
     # Info

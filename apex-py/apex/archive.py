@@ -18,6 +18,7 @@ import struct
 import sys
 import threading
 import time
+import uuid
 import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -32,6 +33,7 @@ from apex.engine import (
     compress_chunk,
     decompress_chunk,
 )
+from apex.fastcdc import fastcdc_chunk_stream
 from apex.security import derive_keys, encrypt_payload, decrypt_payload
 from apex.recovery import generate_recovery_parity, heal_damaged_block
 
@@ -119,10 +121,38 @@ class ArchiveManifest:
         )
 
 
-def build_manifest(target_path: str, chunk_size: int = DEFAULT_FAST_BLOCK_SIZE) -> Tuple[ArchiveManifest, Generator[bytes, None, None]]:
+def should_exclude(rel_path: str, name: str, is_dir: bool, patterns: Optional[List[str]]) -> bool:
+    """Checks if a file or directory matches any exclusion glob patterns."""
+    if not patterns:
+        return False
+    norm_rel = rel_path.replace("\\", "/").strip("/")
+    parts = norm_rel.split("/") if norm_rel else []
+    for pat in patterns:
+        pat_norm = pat.replace("\\", "/").strip("/")
+        # Check against entry name directly (e.g. pat=".git", name=".git" or pat="*.log")
+        if fnmatch.fnmatch(name, pat_norm):
+            return True
+        # Check if any path component matches (e.g. pat=".git", parts=["sub", ".git", "file"])
+        if any(fnmatch.fnmatch(part, pat_norm) for part in parts):
+            return True
+        # Check against full relative path
+        if fnmatch.fnmatch(norm_rel, pat_norm):
+            return True
+        # Check prefix match for directory exclusion
+        if fnmatch.fnmatch(norm_rel, f"{pat_norm}/*") or fnmatch.fnmatch(norm_rel, f"*/{pat_norm}/*"):
+            return True
+    return False
+
+
+def build_manifest(
+    target_path: str,
+    chunk_size: int = DEFAULT_FAST_BLOCK_SIZE,
+    exclude_patterns: Optional[List[str]] = None,
+) -> Tuple[ArchiveManifest, Generator[bytes, None, None]]:
     """
     Builds an ArchiveManifest and yields sequential uncompressed chunks
     as a continuous solid stream from a file or directory.
+    Prunes files and directories matching exclude_patterns.
     """
     p = Path(target_path).resolve()
     if not p.exists():
@@ -132,6 +162,8 @@ def build_manifest(target_path: str, chunk_size: int = DEFAULT_FAST_BLOCK_SIZE) 
     total_size = 0
 
     if p.is_file():
+        if should_exclude(p.name, p.name, False, exclude_patterns):
+            raise ValueError(f"Source file '{p.name}' matches exclusion patterns.")
         stat = p.stat()
         entry = FileEntry(
             rel_path=p.name,
@@ -194,9 +226,12 @@ def build_manifest(target_path: str, chunk_size: int = DEFAULT_FAST_BLOCK_SIZE) 
                 with os.scandir(cur_dir) as it:
                     for entry in it:
                         try:
-                            is_link = entry.is_symlink()
                             full_p = entry.path
                             rel = full_p[root_len:]
+                            is_dir_entry = entry.is_dir(follow_symlinks=False)
+                            if should_exclude(rel, entry.name, is_dir_entry, exclude_patterns):
+                                continue
+                            is_link = entry.is_symlink()
                             if is_link:
                                 target = os.readlink(full_p)
                                 try:
@@ -207,7 +242,7 @@ def build_manifest(target_path: str, chunk_size: int = DEFAULT_FAST_BLOCK_SIZE) 
                                     mode = 0o777
                                     mtime = time.time()
                                 scanned_entries.append((rel, full_p, True, False, False, 0, mode, mtime, target))
-                            elif entry.is_dir(follow_symlinks=False):
+                            elif is_dir_entry:
                                 st = entry.stat(follow_symlinks=False)
                                 scanned_entries.append((rel, full_p, False, True, False, 0, st.st_mode, st.st_mtime, ""))
                                 stack.append(full_p)
@@ -218,6 +253,7 @@ def build_manifest(target_path: str, chunk_size: int = DEFAULT_FAST_BLOCK_SIZE) 
                             pass
             except OSError:
                 pass
+
 
         # Sort entries so order is deterministic
         scanned_entries.sort(key=lambda x: x[0])
@@ -300,16 +336,18 @@ def compress_archive(
     recovery: bool = False,
     cdc: bool = False,
     progress_callback: Optional[Callable[[int, int, str, float], None]] = None,
+    exclude_patterns: Optional[List[str]] = None,
 ) -> Dict:
     """
     Compresses a file or directory into a high-efficiency `.apx` archive.
     Supports authenticated encryption, self-healing recovery records, block deduplication,
-    and multi-core pipelined block compression.
+    FastCDC content-defined chunking, and multi-core pipelined block compression.
+    Writes atomically via a sibling temp file.
     """
     if block_size is None:
         block_size = DEFAULT_FAST_BLOCK_SIZE if mode == Mode.FAST else DEFAULT_BLOCK_SIZE
 
-    manifest, stream = build_manifest(source_path, chunk_size=block_size)
+    manifest, stream = build_manifest(source_path, chunk_size=block_size, exclude_patterns=exclude_patterns)
 
     # Serialize and compress manifest
     manifest_bytes = manifest.to_json().encode("utf-8")
@@ -337,204 +375,196 @@ def compress_archive(
     total_compressed = 0
     total_blocks = 0
     block_records = []
-    seen_hashes: Dict[bytes, int] = {}
+    seen_crypto_hashes: Dict[bytes, int] = {}
     raw_blocks_for_recovery: List[bytes] = []
 
     start_time = time.perf_counter()
 
-    with open(output_archive_path, "wb", buffering=4 * 1024 * 1024) as out:
-        # 1. Magic Header (8 bytes)
-        out.write(MAGIC_HEADER)
+    dest_p = Path(output_archive_path).resolve()
+    dest_p.parent.mkdir(parents=True, exist_ok=True)
+    temp_archive_path = dest_p.parent / f".{dest_p.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}.apx"
+    write_success = False
 
-        # 2. Container Header:
-        # flags (uint16), block_size (uint32), manifest_raw_len (uint32), manifest_comp_len (uint32)
-        out.write(struct.pack(
-            "<HIII",
-            flags,
-            block_size,
-            len(manifest_bytes),
-            len(manifest_payload),
-        ))
+    try:
+        with open(temp_archive_path, "wb", buffering=4 * 1024 * 1024) as out:
+            # 1. Magic Header (8 bytes)
+            out.write(MAGIC_HEADER)
 
-        # Encryption salt (16 bytes) if encrypted
-        if flags & FLAG_ENCRYPTED:
-            out.write(salt)
+            # 2. Container Header:
+            # flags (uint16), block_size (uint32), manifest_raw_len (uint32), manifest_comp_len (uint32)
+            out.write(struct.pack(
+                "<HIII",
+                flags,
+                block_size,
+                len(manifest_bytes),
+                len(manifest_payload),
+            ))
 
-        # Manifest payload
-        out.write(manifest_payload)
+            # Encryption salt (16 bytes) if encrypted
+            if flags & FLAG_ENCRYPTED:
+                out.write(salt)
 
-        # Multi-Core Block Worker Pool (tuned to logical CPU core count)
-        workers = min(os.cpu_count() or 4, 4)
-        max_inflight = 32
+            # Manifest payload
+            out.write(manifest_payload)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-            inflight: Dict[int, Any] = {}
-            next_write_idx = 0
+            # Multi-Core Block Worker Pool (tuned to logical CPU core count)
+            workers = min(os.cpu_count() or 4, 4)
+            max_inflight = 32
 
-            def _compress_worker(b_data: bytes, m: Mode, precomputed_crc: int) -> Tuple[int, bytes, str, int]:
-                c_res = compress_chunk(b_data, mode=m)
-                return (c_res.pipeline_id, c_res.data, c_res.name, precomputed_crc)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+                inflight: Dict[int, Any] = {}
+                next_write_idx = 0
 
-            def write_block(b_idx: int):
-                nonlocal total_compressed
-                item = inflight.pop(b_idx)
-                if len(item) == 5:
-                    # Deduplicated block: (pipeline_id, uncomp_len, payload, crc, winner_name)
-                    pid, u_len, payload, b_crc, w_name = item
-                else:
-                    # Worker future: (fut, u_len)
-                    fut, u_len = item
-                    pid, payload, w_name, b_crc = fut.result()
+                def _compress_worker(b_data: bytes, m: Mode, precomputed_crc: int) -> Tuple[int, bytes, str, int]:
+                    c_res = compress_chunk(b_data, mode=m)
+                    return (c_res.pipeline_id, c_res.data, c_res.name, precomputed_crc)
 
-                if flags & FLAG_ENCRYPTED:
-                    payload = encrypt_payload(payload, enc_key, mac_key)
+                def write_block(b_idx: int):
+                    nonlocal total_compressed
+                    item = inflight.pop(b_idx)
+                    if len(item) == 5:
+                        # Deduplicated block: (pipeline_id, uncomp_len, payload, crc, winner_name)
+                        pid, u_len, payload, b_crc, w_name = item
+                    else:
+                        # Worker future: (fut, u_len)
+                        fut, u_len = item
+                        pid, payload, w_name, b_crc = fut.result()
 
-                c_len = len(payload)
-                total_compressed += c_len
+                    if flags & FLAG_ENCRYPTED:
+                        payload = encrypt_payload(payload, enc_key, mac_key)
 
-                # Write block header: pipeline_id (uint8), uncomp_len (uint32), comp_len (uint32), crc32 (uint32)
-                out.write(struct.pack("<BIII", pid, u_len, c_len, b_crc))
-                out.write(payload)
+                    c_len = len(payload)
+                    total_compressed += c_len
 
-                ratio = (u_len / c_len) if c_len > 0 else 1.0
-                block_records.append({
-                    "block": b_idx + 1,
-                    "pipeline_id": pid,
-                    "winner": w_name,
-                    "uncompressed": u_len,
-                    "compressed": c_len,
-                    "ratio": ratio,
-                })
+                    # Write block header: pipeline_id (uint8), uncomp_len (uint32), comp_len (uint32), crc32 (uint32)
+                    out.write(struct.pack("<BIII", pid, u_len, c_len, b_crc))
+                    out.write(payload)
 
-                if progress_callback:
-                    progress_callback(total_uncompressed, manifest.total_uncompressed_size, w_name, ratio)
+                    ratio = (u_len / c_len) if c_len > 0 else 1.0
+                    block_records.append({
+                        "block": b_idx + 1,
+                        "pipeline_id": pid,
+                        "winner": w_name,
+                        "uncompressed": u_len,
+                        "compressed": c_len,
+                        "ratio": ratio,
+                    })
 
-            chunk_queue: queue.Queue = queue.Queue(maxsize=32)
-            reader_exc: List[Exception] = []
+                    if progress_callback:
+                        progress_callback(total_uncompressed, manifest.total_uncompressed_size, w_name, ratio)
 
-            def reader_worker():
-                try:
-                    if cdc:
-                        # Content-Defined Chunking (FastCDC):
-                        # Solves the byte-shift boundary problem for game updates, DLCs, and patch delta testing.
-                        min_chunk = max(512 * 1024, block_size // 2)
-                        max_chunk = block_size * 2
-                        avg_chunk = block_size
+                chunk_queue: queue.Queue = queue.Queue(maxsize=32)
+                reader_exc: List[Exception] = []
 
-                        buffer = bytearray()
-                        for chunk in stream:
-                            buffer.extend(chunk)
-                            while len(buffer) >= max_chunk:
-                                idx = buffer.find(b"\x00\x00", min_chunk)
-                                if idx != -1 and idx <= max_chunk - 2:
-                                    cut = idx + 2
-                                else:
-                                    cut = avg_chunk
-                                block_data = bytes(buffer[:cut])
-                                del buffer[:cut]
+                def reader_worker():
+                    try:
+                        if cdc:
+                            # Content-Defined Chunking (FastCDC with Gear Hash):
+                            # Solves byte-shift boundary problems for delta testing, DLCs, and game patches
+                            min_chunk = max(512 * 1024, block_size // 2)
+                            max_chunk = block_size * 2
+                            avg_chunk = block_size
+                            for block_data in fastcdc_chunk_stream(stream, min_chunk, avg_chunk, max_chunk):
                                 overall_hasher.update(block_data)
                                 b_crc = zlib.crc32(block_data)
                                 chunk_queue.put((block_data, b_crc))
+                        else:
+                            # Direct Zero-Copy Block Streaming from pre-buffered stream
+                            for block_data in stream:
+                                overall_hasher.update(block_data)
+                                b_crc = zlib.crc32(block_data)
+                                chunk_queue.put((block_data, b_crc))
+                    except Exception as e:
+                        reader_exc.append(e)
+                    finally:
+                        chunk_queue.put(None)
 
-                        while len(buffer) >= avg_chunk:
-                            idx = buffer.find(b"\x00\x00", min_chunk)
-                            if idx != -1 and idx <= min(len(buffer) - 2, max_chunk - 2):
-                                cut = idx + 2
-                            else:
-                                cut = avg_chunk
-                            block_data = bytes(buffer[:cut])
-                            del buffer[:cut]
-                            overall_hasher.update(block_data)
-                            b_crc = zlib.crc32(block_data)
-                            chunk_queue.put((block_data, b_crc))
+                reader_t = threading.Thread(target=reader_worker, daemon=True)
+                reader_t.start()
 
-                        if len(buffer) > 0:
-                            block_data = bytes(buffer)
-                            buffer.clear()
-                            overall_hasher.update(block_data)
-                            b_crc = zlib.crc32(block_data)
-                            chunk_queue.put((block_data, b_crc))
+                def dispatch_block(b_data: bytes, b_crc: int):
+                    nonlocal total_blocks, total_uncompressed, next_write_idx
+                    b_idx = total_blocks
+                    total_blocks += 1
+
+                    u_len = len(b_data)
+                    total_uncompressed += u_len
+
+                    if recovery:
+                        raw_blocks_for_recovery.append(b_data)
+
+                    # Cryptographic BLAKE2b (256-bit) collision-proof deduplication verification
+                    crypto_key = hashlib.blake2b(b_data, digest_size=32).digest()
+                    if crypto_key in seen_crypto_hashes:
+                        prev_idx = seen_crypto_hashes[crypto_key]
+                        payload = struct.pack("<I", prev_idx)
+                        inflight[b_idx] = (PIPELINE_DEDUP_REF, u_len, payload, b_crc, f"Deduplicated (ref #{prev_idx})")
                     else:
-                        # Direct Zero-Copy Block Streaming from pre-buffered stream
-                        for block_data in stream:
-                            overall_hasher.update(block_data)
-                            b_crc = zlib.crc32(block_data)
-                            chunk_queue.put((block_data, b_crc))
-                except Exception as e:
-                    reader_exc.append(e)
-                finally:
-                    chunk_queue.put(None)
+                        seen_crypto_hashes[crypto_key] = b_idx
+                        fut = executor.submit(_compress_worker, b_data, mode, b_crc)
+                        inflight[b_idx] = (fut, u_len)
 
-            reader_t = threading.Thread(target=reader_worker, daemon=True)
-            reader_t.start()
+                    while len(inflight) >= max_inflight:
+                        write_block(next_write_idx)
+                        next_write_idx += 1
 
-            def dispatch_block(b_data: bytes, b_crc: int):
-                nonlocal total_blocks, total_uncompressed, next_write_idx
-                b_idx = total_blocks
-                total_blocks += 1
+                while True:
+                    item = chunk_queue.get()
+                    if item is None:
+                        if reader_exc:
+                            raise reader_exc[0]
+                        break
+                    b_data, b_crc = item
+                    dispatch_block(b_data, b_crc)
 
-                u_len = len(b_data)
-                total_uncompressed += u_len
-
-                if recovery:
-                    raw_blocks_for_recovery.append(b_data)
-
-                # Ultra-Fast SIMD Fingerprint Deduplication (< 1 microsecond)
-                quick_key = (b_crc, u_len, b_data[:32], b_data[-32:])
-                if quick_key in seen_hashes:
-                    prev_idx = seen_hashes[quick_key]
-                    payload = struct.pack("<I", prev_idx)
-                    inflight[b_idx] = (PIPELINE_DEDUP_REF, u_len, payload, b_crc, f"Deduplicated (ref #{prev_idx})")
-                else:
-                    seen_hashes[quick_key] = b_idx
-                    fut = executor.submit(_compress_worker, b_data, mode, b_crc)
-                    inflight[b_idx] = (fut, u_len)
-
-                while len(inflight) >= max_inflight:
+                # Drain all remaining inflight blocks in order
+                while next_write_idx < total_blocks:
                     write_block(next_write_idx)
                     next_write_idx += 1
 
-            while True:
-                item = chunk_queue.get()
-                if item is None:
-                    if reader_exc:
-                        raise reader_exc[0]
-                    break
-                b_data, b_crc = item
-                dispatch_block(b_data, b_crc)
+                reader_t.join()
 
-            # Drain all remaining inflight blocks in order
-            while next_write_idx < total_blocks:
-                write_block(next_write_idx)
-                next_write_idx += 1
+            # EOF Marker
+            out.write(struct.pack("<BIII", EOF_PIPELINE_ID, 0, 0, 0))
 
-            reader_t.join()
+            # Stream Footer:
+            # sha256 (32 bytes), total_uncompressed_bytes (uint64), total_blocks (uint32), footer_magic (4 bytes)
+            digest = overall_hasher.digest()
+            out.write(digest)
+            out.write(struct.pack("<QI", total_uncompressed, total_blocks))
+            out.write(MAGIC_FOOTER)
 
-        # EOF Marker
-        out.write(struct.pack("<BIII", EOF_PIPELINE_ID, 0, 0, 0))
+            # Self-Healing Recovery Records (Parity)
+            if flags & FLAG_RECOVERY and raw_blocks_for_recovery:
+                parity_data, max_b_len = generate_recovery_parity(raw_blocks_for_recovery)
+                out.write(struct.pack("<II", len(parity_data), max_b_len))
+                out.write(parity_data)
 
-        # Stream Footer:
-        # sha256 (32 bytes), total_uncompressed_bytes (uint64), total_blocks (uint32), footer_magic (4 bytes)
-        digest = overall_hasher.digest()
-        out.write(digest)
-        out.write(struct.pack("<QI", total_uncompressed, total_blocks))
-        out.write(MAGIC_FOOTER)
+            out.flush()
+            try:
+                os.fsync(out.fileno())
+            except OSError:
+                pass
 
-        # Self-Healing Recovery Records (Parity)
-        if flags & FLAG_RECOVERY and raw_blocks_for_recovery:
-            parity_data, max_b_len = generate_recovery_parity(raw_blocks_for_recovery)
-            out.write(struct.pack("<II", len(parity_data), max_b_len))
-            out.write(parity_data)
+        # Atomically promote sibling temp file to destination archive
+        os.replace(temp_archive_path, dest_p)
+        write_success = True
+    finally:
+        if not write_success and temp_archive_path.exists():
+            try:
+                temp_archive_path.unlink()
+            except OSError:
+                pass
 
     elapsed = time.perf_counter() - start_time
-    archive_file_size = os.path.getsize(output_archive_path)
+    archive_file_size = os.path.getsize(dest_p)
     overall_ratio = (total_uncompressed / archive_file_size) if archive_file_size > 0 else 1.0
     space_saved = (1.0 - (archive_file_size / total_uncompressed)) * 100.0 if total_uncompressed > 0 else 0.0
 
     return {
         "status": "SUCCESS",
         "source": source_path,
-        "archive": output_archive_path,
+        "archive": str(dest_p),
         "uncompressed_bytes": total_uncompressed,
         "compressed_bytes": archive_file_size,
         "ratio": overall_ratio,
@@ -780,6 +810,38 @@ def _write_symlink_fast(target_path: str, link_target: str, mtime: float):
         pass
 
 
+def _promote_staging_to_dest(staging: Path, dest: Path):
+    """Atomically promotes a staged directory to destination, merging if destination already exists."""
+    if not dest.exists():
+        try:
+            os.replace(staging, dest)
+            return
+        except OSError:
+            pass
+    dest.mkdir(parents=True, exist_ok=True)
+    for root, dirs, files in os.walk(staging, followlinks=False):
+        rel = os.path.relpath(root, staging)
+        target_dir = dest if rel == "." else dest / rel
+        target_dir.mkdir(parents=True, exist_ok=True)
+        for f_name in files:
+            s_file = Path(root) / f_name
+            d_file = target_dir / f_name
+            try:
+                if d_file.is_symlink() or d_file.exists():
+                    try:
+                        os.chmod(d_file, 0o777)
+                    except OSError:
+                        pass
+                    if d_file.is_dir() and not d_file.is_symlink():
+                        shutil.rmtree(d_file, ignore_errors=True)
+                    else:
+                        d_file.unlink(missing_ok=True)
+            except OSError:
+                pass
+            os.replace(s_file, d_file)
+    shutil.rmtree(staging, ignore_errors=True)
+
+
 def decompress_archive(
     archive_path: str,
     output_dir: Optional[str] = None,
@@ -802,6 +864,10 @@ def decompress_archive(
     stop_event = threading.Event()
     writer_stop_event = threading.Event()
     block_queue: queue.Queue = queue.Queue(maxsize=32)
+
+    staging_file_to_cleanup: Optional[Path] = None
+    staging_dir_to_cleanup: Optional[Path] = None
+    decomp_success = False
 
     try:
         with open(archive_p, "rb") as f:
@@ -1043,7 +1109,9 @@ def decompress_archive(
                         target_file = out_base / file_entry.rel_path
 
                     target_file.parent.mkdir(parents=True, exist_ok=True)
-                    target_str = str(target_file)
+                    staging_file = target_file.parent / f".{target_file.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}"
+                    staging_file_to_cleanup = staging_file
+                    target_str = str(staging_file)
 
                     if file_entry.is_symlink:
                         _write_symlink_fast(target_str, file_entry.link_target, file_entry.mtime)
@@ -1101,7 +1169,7 @@ def decompress_archive(
                         finally:
                             os.close(fd)
 
-                    extracted_paths.append(target_str)
+                    extracted_paths.append(str(target_file))
 
             else:
                 if output_dir:
@@ -1113,12 +1181,19 @@ def decompress_archive(
                 else:
                     dest_root = out_base / manifest.root_name
 
-                dest_root.mkdir(parents=True, exist_ok=True)
+                dest_root.parent.mkdir(parents=True, exist_ok=True)
+                staging_root = dest_root.parent / f".{dest_root.name}.staging.{os.getpid()}.{uuid.uuid4().hex}"
+                staging_dir_to_cleanup = staging_root
+                staging_root.mkdir(parents=True, exist_ok=True)
+
+                staging_root_str = str(staging_root)
+                if not staging_root_str.endswith("/"):
+                    staging_root_str += "/"
                 dest_root_str = str(dest_root)
                 if not dest_root_str.endswith("/"):
                     dest_root_str += "/"
 
-                # Step 1: Upfront Directory Tree Materialization (Single Pass)
+                # Step 1: Upfront Directory Tree Materialization (Single Pass) in staging_root
                 unique_dirs = set()
                 for file_entry in manifest.files:
                     if not should_extract(file_entry.rel_path):
@@ -1141,7 +1216,7 @@ def decompress_archive(
 
                 sorted_dirs = sorted(unique_dirs, key=lambda d: (d.count("/"), len(d)))
                 for d in sorted_dirs:
-                    full_d = dest_root_str + d
+                    full_d = staging_root_str + d
                     try:
                         os.mkdir(full_d)
                     except FileExistsError:
@@ -1195,7 +1270,7 @@ def decompress_archive(
                         current_batch = []
                         batch_bytes = 0
 
-                # Step 3: Stream and Pipeline File Writing
+                # Step 3: Stream and Pipeline File Writing to staging directory
                 for file_entry in manifest.files:
                     if worker_errors:
                         raise worker_errors[0]
@@ -1208,25 +1283,26 @@ def decompress_archive(
                         continue
 
                     rel_norm = file_entry.rel_path.replace("\\", "/")
-                    target_str = dest_root_str + rel_norm
+                    staging_item_str = staging_root_str + rel_norm
+                    final_item_str = dest_root_str + rel_norm
 
                     if file_entry.is_dir:
-                        deferred_dir_perms.append((target_str, file_entry.mode, file_entry.mtime))
-                        extracted_paths.append(target_str)
+                        deferred_dir_perms.append((final_item_str, file_entry.mode, file_entry.mtime))
+                        extracted_paths.append(final_item_str)
                         maybe_report()
                         continue
 
                     if file_entry.is_symlink:
-                        current_batch.append((True, target_str, None, 0, file_entry.mtime, file_entry.link_target))
-                        extracted_paths.append(target_str)
+                        current_batch.append((True, staging_item_str, None, 0, file_entry.mtime, file_entry.link_target))
+                        extracted_paths.append(final_item_str)
                         if len(current_batch) >= MAX_BATCH_FILES:
                             flush_batch()
                         maybe_report()
                         continue
 
                     if file_entry.size == 0:
-                        current_batch.append((False, target_str, b"", file_entry.mode, file_entry.mtime, None))
-                        extracted_paths.append(target_str)
+                        current_batch.append((False, staging_item_str, b"", file_entry.mode, file_entry.mtime, None))
+                        extracted_paths.append(final_item_str)
                         if len(current_batch) >= MAX_BATCH_FILES:
                             flush_batch()
                         maybe_report()
@@ -1236,31 +1312,31 @@ def decompress_archive(
                         data = get_bytes_slice(file_entry.size)
                         w_len = len(data)
                         written_bytes += w_len
-                        current_batch.append((False, target_str, data, file_entry.mode, file_entry.mtime, None))
+                        current_batch.append((False, staging_item_str, data, file_entry.mode, file_entry.mtime, None))
                         batch_bytes += w_len
-                        extracted_paths.append(target_str)
+                        extracted_paths.append(final_item_str)
                         if len(current_batch) >= MAX_BATCH_FILES or batch_bytes >= MAX_BATCH_BYTES:
                             flush_batch()
                         maybe_report()
                         continue
 
-                    # Large file (> 4MB): Stream directly with zero-copy NVMe I/O
+                    # Large file (> 4MB): Stream directly with zero-copy NVMe I/O to staging_item_str
                     flush_batch()
                     try:
-                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
+                        fd = os.open(staging_item_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
                     except OSError:
                         try:
-                            os.chmod(target_str, 0o777)
+                            os.chmod(staging_item_str, 0o777)
                         except OSError:
                             pass
                         try:
-                            if os.path.isdir(target_str) and not os.path.islink(target_str):
-                                shutil.rmtree(target_str, ignore_errors=True)
+                            if os.path.isdir(staging_item_str) and not os.path.islink(staging_item_str):
+                                shutil.rmtree(staging_item_str, ignore_errors=True)
                             else:
-                                os.unlink(target_str)
+                                os.unlink(staging_item_str)
                         except OSError:
                             pass
-                        fd = os.open(target_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
+                        fd = os.open(staging_item_str, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | O_BINARY, file_entry.mode)
 
                     rem = file_entry.size
                     try:
@@ -1285,7 +1361,7 @@ def decompress_archive(
                             os.utime(fd, (file_entry.mtime, file_entry.mtime))
                         except (OSError, NotImplementedError, TypeError):
                             try:
-                                os.utime(target_str, (file_entry.mtime, file_entry.mtime))
+                                os.utime(staging_item_str, (file_entry.mtime, file_entry.mtime))
                             except OSError:
                                 pass
                         if file_entry.mode & 0o222 == 0:
@@ -1293,13 +1369,13 @@ def decompress_archive(
                                 os.fchmod(fd, file_entry.mode)
                             except (OSError, NotImplementedError, AttributeError):
                                 try:
-                                    os.chmod(target_str, file_entry.mode)
+                                    os.chmod(staging_item_str, file_entry.mode)
                                 except OSError:
                                     pass
                     finally:
                         os.close(fd)
 
-                    extracted_paths.append(target_str)
+                    extracted_paths.append(final_item_str)
                     maybe_report()
 
                 # Flush remaining batches and wait for all writers
@@ -1312,20 +1388,6 @@ def decompress_archive(
 
                 if worker_errors:
                     raise worker_errors[0]
-
-                # Step 4: Restore directory timestamps & permissions from deepest to shallowest
-                deferred_dir_perms.sort(key=lambda item: (item[0].count("/"), len(item[0])), reverse=True)
-                for d_str, d_mode, d_mtime in deferred_dir_perms:
-                    try:
-                        if d_mtime is not None:
-                            os.utime(d_str, (d_mtime, d_mtime))
-                    except OSError:
-                        pass
-                    try:
-                        if d_mode is not None and (d_mode & 0o777) != 0o755:
-                            os.chmod(d_str, d_mode)
-                    except OSError:
-                        pass
 
             # Ensure feeder thread finishes and footer verification completes
             while True:
@@ -1343,6 +1405,30 @@ def decompress_archive(
             if feeder_stats["error"]:
                 raise feeder_stats["error"]
 
+            # Promote staged extractions atomically after 100% verified integrity
+            if staging_file_to_cleanup and staging_file_to_cleanup.exists():
+                os.replace(staging_file_to_cleanup, target_file)
+                staging_file_to_cleanup = None
+
+            if staging_dir_to_cleanup and staging_dir_to_cleanup.exists():
+                _promote_staging_to_dest(staging_dir_to_cleanup, dest_root)
+                staging_dir_to_cleanup = None
+                # Restore directory timestamps & permissions on promoted directory
+                deferred_dir_perms.sort(key=lambda item: (item[0].count("/"), len(item[0])), reverse=True)
+                for d_str, d_mode, d_mtime in deferred_dir_perms:
+                    try:
+                        if d_mtime is not None:
+                            os.utime(d_str, (d_mtime, d_mtime))
+                    except OSError:
+                        pass
+                    try:
+                        if d_mode is not None and (d_mode & 0o777) != 0o755:
+                            os.chmod(d_str, d_mode)
+                    except OSError:
+                        pass
+
+            decomp_success = True
+
             if progress_callback:
                 progress_callback(written_bytes, manifest.total_uncompressed_size, len(extracted_paths))
 
@@ -1358,12 +1444,21 @@ def decompress_archive(
     finally:
         writer_stop_event.set()
         stop_event.set()
+        if not decomp_success:
+            if staging_file_to_cleanup and staging_file_to_cleanup.exists():
+                try:
+                    staging_file_to_cleanup.unlink()
+                except OSError:
+                    pass
+            if staging_dir_to_cleanup and staging_dir_to_cleanup.exists():
+                shutil.rmtree(staging_dir_to_cleanup, ignore_errors=True)
         try:
             while not block_queue.empty():
                 block_queue.get_nowait()
         except Exception:
             pass
         os.umask(old_umask)
+
 
 
 def repair_archive(
@@ -1487,31 +1582,51 @@ def repair_archive(
     for idx in range(total_blocks):
         overall_hasher.update(raw_blocks[idx])
 
-    with open(archive_p, "rb") as orig_f, open(out_path, "wb") as out_f:
-        orig_f.seek(0)
-        # Copy magic and container header
-        out_f.write(orig_f.read(8))  # Magic
-        hdr_b = orig_f.read(struct.calcsize("<HIII"))
-        out_f.write(hdr_b)
-        f_flags, b_size, m_raw_l, m_comp_l = struct.unpack("<HIII", hdr_b)
-        if f_flags & FLAG_ENCRYPTED:
-            out_f.write(orig_f.read(16))  # Salt
-        out_f.write(orig_f.read(m_comp_l))  # Manifest
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_repaired_path = out_path.parent / f".{out_path.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}.apx"
+    repair_success = False
 
-        # Write healed blocks
-        for pid, u_len, c_len, crc, payload in block_metas:
-            out_f.write(struct.pack("<BIII", pid, u_len, c_len, crc))
-            out_f.write(payload)
+    try:
+        with open(archive_p, "rb") as orig_f, open(temp_repaired_path, "wb") as out_f:
+            orig_f.seek(0)
+            # Copy magic and container header
+            out_f.write(orig_f.read(8))  # Magic
+            hdr_b = orig_f.read(struct.calcsize("<HIII"))
+            out_f.write(hdr_b)
+            f_flags, b_size, m_raw_l, m_comp_l = struct.unpack("<HIII", hdr_b)
+            if f_flags & FLAG_ENCRYPTED:
+                out_f.write(orig_f.read(16))  # Salt
+            out_f.write(orig_f.read(m_comp_l))  # Manifest
 
-        # EOF
-        out_f.write(struct.pack("<BIII", EOF_PIPELINE_ID, 0, 0, 0))
-        # Updated footer with verified SHA-256
-        out_f.write(overall_hasher.digest())
-        out_f.write(struct.pack("<QI", stored_uncomp, total_blocks))
-        out_f.write(MAGIC_FOOTER)
-        # Parity
-        out_f.write(struct.pack("<II", len(parity_data), parity_max_block_len))
-        out_f.write(parity_data)
+            # Write healed blocks
+            for pid, u_len, c_len, crc, payload in block_metas:
+                out_f.write(struct.pack("<BIII", pid, u_len, c_len, crc))
+                out_f.write(payload)
+
+            # EOF
+            out_f.write(struct.pack("<BIII", EOF_PIPELINE_ID, 0, 0, 0))
+            # Updated footer with verified SHA-256
+            out_f.write(overall_hasher.digest())
+            out_f.write(struct.pack("<QI", stored_uncomp, total_blocks))
+            out_f.write(MAGIC_FOOTER)
+            # Parity
+            out_f.write(struct.pack("<II", len(parity_data), parity_max_block_len))
+            out_f.write(parity_data)
+
+            out_f.flush()
+            try:
+                os.fsync(out_f.fileno())
+            except OSError:
+                pass
+
+        os.replace(temp_repaired_path, out_path)
+        repair_success = True
+    finally:
+        if not repair_success and temp_repaired_path.exists():
+            try:
+                temp_repaired_path.unlink()
+            except OSError:
+                pass
 
     elapsed = time.perf_counter() - t0
     return {

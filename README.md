@@ -1,14 +1,14 @@
 <img src="logo.svg" align="left" width="160" hspace="20" alt="ApexCompress Logo" />
 
 ### ⚡ ApexCompress (`apex`) ⚡📦
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0) [![CI Tests](https://img.shields.io/badge/Test_Suite-40%2F40_Passing-brightgreen.svg)]() [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)]() [![Python](https://img.shields.io/badge/Python-3.9_%7C_3.10_%7C_3.11_%7C_3.12_%7C_3.13_%7C_3.14-blue.svg)]()<br>
-[![Standalone Binary](https://img.shields.io/badge/Standalone_Binary-Zero_External_Dependencies-orange.svg)]() [![Integrity](https://img.shields.io/badge/Integrity-100%25_Bit--Exact_SHA--256-success.svg)]() [![Security](https://img.shields.io/badge/Security-AES--256--CTR_%2B_HMAC--SHA256-red.svg)]()
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/GPL-3.0) [![CI Tests](https://img.shields.io/badge/Test_Suite-58%2F58_Passing-brightgreen.svg)]() [![Platform](https://img.shields.io/badge/Platform-macOS_%7C_Linux_%7C_Windows-lightgrey.svg)]() [![Python](https://img.shields.io/badge/Python-3.9_%7C_3.10_%7C_3.11_%7C_3.12_%7C_3.13_%7C_3.14-blue.svg)]()<br>
+[![Standalone Binary](https://img.shields.io/badge/Standalone_Binary-Zero_External_Dependencies-orange.svg)]() [![Integrity](https://img.shields.io/badge/Integrity-100%25_Bit--Exact_SHA--256-success.svg)]() [![Security](https://img.shields.io/badge/Security-ChaCha20_%7C_AES--256--CTR_%2B_HMAC-red.svg)]()
 
 <br clear="left"/>
 
 APEX is an adaptive lossless compression and archival system engineered to maximize practical compression efficiency across heterogeneous data by dynamically selecting reversible preprocessing transforms, compression engines, and deduplication strategies on a per-block basis.
 
-**Status: Production Release · v1.1.0**
+**Status: Production Release · v1.2.0**
 
 > APEX is designed for archival and high-performance compression.
 > As with any storage system, maintain independent backups of irreplaceable data.
@@ -58,15 +58,18 @@ For example:
 - Adaptive per-block compression
 - 11 reversible preprocessing transforms
 - Multi-engine tournament selection
+- **Skip pipeline exclusion (`-e / --exclude`)** for pruning `.git`, `node_modules`, temporary files, and custom globs
+- **Atomic archive writing & extraction rollback**: sibling temp files and staged directories guarantee 0% corruption on interrupts or errors
+- **True FastCDC Content-Defined Chunking** using 256-entry Gear hash for byte-shift resilience
+- **Cryptographic BLAKE2b deduplication** with bit-exact safety against hash collisions
+- **Portable authenticated encryption** (ChaCha20 & AES-256-CTR with PBKDF2 and HMAC-SHA256)
 - Selective extraction with zero-copy stream skipping
 - Archive diff comparison tool (`apex diff`)
 - Shell completions for Bash, Zsh, and Fish
 - High-level Python SDK (`import apex`) & in-memory tournament compression
 - Windows Context Menu Explorer integration
 - Multi-threaded solid stream chunking
-- Block-level deduplication via FastCDC
 - Stream SHA-256 cryptographic integrity verification
-- Optional authenticated encryption (AES-256-CTR + HMAC-SHA256)
 - Optional self-healing Reed-Solomon parity records
 
 ---
@@ -415,11 +418,17 @@ apex c project/ -o project_ultra.apx -m ultra
 | :--- | :---: | :---: | :---: | :--- |
 | `--output` | `-o` | `PATH` | Auto | Destination archive path (`.apx`) |
 | `--mode` | `-m` | `STRING` | `balanced` | Tournament preset: `fast`, `balanced`, or `ultra` |
+| `--exclude` | `-e` | `GLOB` | `None` | Exclude file/folder pattern (e.g. `-e .git -e node_modules -e '*.tmp'`) |
+| `--cdc` | | `FLAG` | `False` | Enable FastCDC Gear-hash Content-Defined Chunking for delta updates |
 | `--block-size` | `-b` | `STRING` | `2M` | Block size override (e.g. `1M`, `2M`, `4M`, `8M`, `16M`) |
-| `--threads` | `-t` | `INT` | Auto | Number of parallel worker CPU threads |
 | `--recovery` | `-r` | `FLAG` | `False` | Attach Cauchy Reed-Solomon self-healing parity records (~5%) |
-| `--password` | `-p` | `STRING` | `None` | Encrypt archive with AES-256-CTR & HMAC-SHA256 |
+| `--password` | `-p` | `STRING` | `None` | Encrypt archive with ChaCha20/AES + HMAC-SHA256 authenticated encryption |
 | `--quiet` | `-q` | `FLAG` | `False` | Suppress interactive progress bar and telemetry output |
+
+```bash
+# Compress git repository excluding .git and build artifacts
+apex c my_repo/ -o repo.apx -e .git -e node_modules -e "dist/*" -e "*.tmp"
+```
 
 #### Example Output:
 ```
@@ -643,12 +652,15 @@ apex fix corrupted_archive.apx -o healthy_archive.apx
 
 ### 8. apex benchmark (b)
 
-Performs a live shootout tournament benchmark comparing ApexCompress against **Gzip**, **Bzip2**, **XZ**, **Zstandard**, and **Brotli** on any file or directory.
+Performs a live shootout tournament benchmark comparing ApexCompress against **Gzip**, **Bzip2**, **XZ**, **Zstandard**, and **Brotli** on any file or directory. Accurately measures compression ratio, space saved, and CPU wall time.
 
 ```bash
 apex benchmark sample_data.json
-# or
-apex b /path/to/test_dataset
+# or benchmark full dataset without the 16 MB sample cap
+apex b /path/to/large_dataset --full
+
+# or adjust max sample size
+apex b dataset.bin --max-sample-mb 64
 ```
 
 #### Example Output:

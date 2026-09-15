@@ -21,5 +21,15 @@ ApexCompress v1.2.0 delivers major architectural improvements across data safety
 - **Production Specification Synchronized**: `docs/FORMAT.md` updated to v1.2.0 production specification.
 
 ---
-**Checksums & Standalone Assets**:
-Standalone binaries for macOS, Linux, and Windows are attached below with corresponding SHA-256 checksums.
+### 📦 Pre-Compiled Standalone Binaries (v1.2.0)
+No Python runtime or external dependencies required:
+- **macOS (Darwin x86_64 / Apple Silicon)**: `apex-v1.2.0-darwin-x86_64.tar.gz`
+- **Linux (GLIBC 2.28+ x86_64)**: `apex-v1.2.0-linux-x86_64.tar.gz`
+- **Windows (10 / 11 x86_64)**: `apex-v1.2.0-windows-x86_64.zip`
+
+### 🔒 Cryptographic SHA-256 Checksums
+```text
+af9ac0cc8ea5b07ce086135fc342d219086ef142b7637fa24091742627d76b06  apex-v1.2.0-darwin-x86_64.tar.gz
+511b576888a11e4c0aa500d22342543a027b6a7982b1038c463f24a685f47583  apex-v1.2.0-linux-x86_64.tar.gz
+5ee19cd6dd9beca828284eb70c02d771e52b73ea06e586336d9666a154d83016  apex-v1.2.0-windows-x86_64.zip
+```

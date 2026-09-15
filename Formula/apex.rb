@@ -15,7 +15,7 @@ class Apex < Formula
   on_linux do
     if Hardware::CPU.intel?
       url "https://github.com/qxmcu/apex/releases/download/v1.2.0/apex-v1.2.0-linux-x86_64.tar.gz"
-      sha256 "4c8d2036c05160893086300a7faae95fa809e530fe71946eb253818e692a8fa2"
+      sha256 "511b576888a11e4c0aa500d22342543a027b6a7982b1038c463f24a685f47583"
     end
   end
 

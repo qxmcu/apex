@@ -5,7 +5,7 @@
 
   <p>
     <a href="https://github.com/qxmcu/apex/releases"><img src="https://img.shields.io/badge/release-v1.2.0-brightgreen?style=flat-square" alt="Release" /></a>
-    <a href="https://github.com/qxmcu/apex/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue?style=flat-square" alt="License" /></a>
+    <a href="https://github.com/qxmcu/apex/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square" alt="License" /></a>
     <a href="https://github.com/qxmcu/homebrew-tap"><img src="https://img.shields.io/badge/homebrew-tap-orange?style=flat-square" alt="Homebrew" /></a>
     <a href="https://github.com/qxmcu/apex/actions"><img src="https://img.shields.io/badge/tests-53%20passed-success?style=flat-square" alt="Tests" /></a>
     <a href="https://qxmcu.github.io/apex/"><img src="https://img.shields.io/badge/docs-interactive%20portal-darkgreen?style=flat-square" alt="Documentation" /></a>
@@ -179,4 +179,4 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for ar
 
 ## License
 
-ApexCompress is free software licensed under the **GNU General Public License v3.0 (GPLv3)**. See [LICENSE](LICENSE) for details.
+ApexCompress is free software licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) for details.

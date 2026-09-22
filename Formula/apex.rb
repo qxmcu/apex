@@ -5,7 +5,7 @@ class Apex < Formula
   desc "Adaptive Tournament Multi-Engine Compression Tool & Next-Gen Container"
   homepage "https://qxmcu.github.io/apex/"
   version "1.2.0"
-  license "GPL-3.0-or-later"
+  license "Apache-2.0"
 
   on_macos do
     url "https://github.com/qxmcu/apex/releases/download/v1.2.0/apex-v1.2.0-darwin-x86_64.tar.gz"

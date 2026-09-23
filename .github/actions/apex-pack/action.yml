@@ -1,0 +1,46 @@
+name: 'Apex Pack'
+description: 'Fast, high-ratio artifact packaging using Apex tournament compression'
+author: 'Apex Compression Lab'
+inputs:
+  path:
+    description: 'Path of file or directory to compress'
+    required: true
+  output:
+    description: 'Output .apx archive path'
+    required: true
+  mode:
+    description: 'Compression preset mode (fast, balanced, ultra, brute)'
+    default: 'fast'
+    required: false
+  password:
+    description: 'Optional encryption password'
+    default: ''
+    required: false
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install Apex
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install apexcompress
+    - name: Compress with Apex
+      shell: bash
+      run: |
+        CMD="apex compress \"${{ inputs.path }}\" -o \"${{ inputs.output }}\" -m \"${{ inputs.mode }}\""
+        if [ -n "${{ inputs.password }}" ]; then
+          CMD="$CMD -p \"${{ inputs.password }}\""
+        fi
+        eval $CMD
+    - name: Verify Archive Integrity
+      shell: bash
+      run: |
+        CMD="apex test \"${{ inputs.output }}\""
+        if [ -n "${{ inputs.password }}" ]; then
+          CMD="$CMD -p \"${{ inputs.password }}\""
+        fi
+        eval $CMD

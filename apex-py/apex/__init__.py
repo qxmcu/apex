@@ -20,7 +20,7 @@ from apex.benchmark import run_benchmark
 from apex.diff import diff_archives
 from apex.engine import Mode, compress_chunk, decompress_chunk
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 __author__ = "Apex Compression Lab"
 
 

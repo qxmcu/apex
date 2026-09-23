@@ -136,7 +136,7 @@ class TestTooling(unittest.TestCase):
 
     def test_python_sdk_api(self):
         # 1. SDK version
-        self.assertEqual(apex.__version__, "1.2.0")
+        self.assertEqual(apex.__version__, "1.3.0")
 
         # 2. File compression & extraction via SDK
         txt_path = os.path.join(self.test_dir, "sdk_input.txt")

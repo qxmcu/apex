@@ -3,11 +3,12 @@ ApexCompress CLI - The Adaptive Tournament Multi-Engine Compression Tool.
 """
 
 import argparse
+import json
 import os
 import sys
 import time
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 # Force UTF-8 encoding on Windows to prevent UnicodeEncodeError with UI characters
 if sys.platform == "win32":
@@ -20,18 +21,27 @@ if sys.platform == "win32":
 from apex.analyzer import analyze_file
 from apex.archive import (
     DEFAULT_BLOCK_SIZE,
+    DEFAULT_FAST_BLOCK_SIZE,
     FLAG_ENCRYPTED,
     FLAG_RECOVERY,
+    MAGIC_HEADER,
     compress_archive,
     decompress_archive,
     read_archive_header,
     repair_archive,
+    scan_block_index,
     test_archive,
 )
 from apex.benchmark import format_bytes, run_benchmark
 from apex.completions import generate_completions
 from apex.diff import diff_archives, format_diff_report
 from apex.engine import Mode
+from apex.foreign import (
+    extract_foreign,
+    is_foreign_archive,
+    list_foreign,
+    test_foreign,
+)
 
 # ANSI Colors
 BOLD = "\033[1m"
@@ -53,25 +63,128 @@ def print_banner():
 / /_\\\\|  __/ /_     | |/ /_\\\\|  __/| | | | | | |_) | _   
 \\____/ \\___|\\__|    |_|\\____/ \\___||_| |_| |_| .__/ (_)  
                                              |_|         
-{RESET}{DIM}  Adaptive Multi-Engine Tournament Compression System v1.2.0{RESET}
+{RESET}{DIM}  Adaptive Multi-Engine Tournament Compression System v1.3.0{RESET}
 """
     print(banner)
 
 
+def preprocess_tar_args(argv: List[str]) -> List[str]:
+    """
+    Translates standard tar-style cluster flags into apex CLI arguments.
+    Supports -cvf out.apx src/, -xvf out.apx, -tvf out.apx, -cf - src/, -xf -, -c0f out.apx, etc.
+    """
+    if len(argv) < 2:
+        return argv
+
+    token = argv[1]
+    is_dashed = token.startswith("-") and not token.startswith("--")
+    raw = token[1:] if is_dashed else token
+
+    # Check characters: must contain at least one of 'c', 'x', 't'
+    # and all characters must be in 'cxvt0fzj'
+    if not (
+        ("c" in raw or "x" in raw or ("t" in raw and (is_dashed or "f" in raw)))
+        and all(ch in "cxvt0fzj" for ch in raw)
+        and len(raw) >= (1 if is_dashed else 2)
+    ):
+        return argv
+
+    # Determine action
+    if "c" in raw:
+        action = "compress"
+    elif "x" in raw:
+        action = "decompress"
+    elif "t" in raw:
+        action = "list"
+    else:
+        return argv
+
+    has_f = "f" in raw
+    has_v = "v" in raw
+    has_null = "0" in raw
+
+    arg_idx = 2
+    archive_arg = None
+    if has_f:
+        if arg_idx < len(argv):
+            archive_arg = argv[arg_idx]
+            arg_idx += 1
+        else:
+            print("Error: Option -f requires an argument.", file=sys.stderr)
+            sys.exit(1)
+
+    new_argv = [argv[0], action]
+
+    if action == "compress":
+        if archive_arg:
+            new_argv.extend(["-o", archive_arg])
+        if has_v:
+            new_argv.append("-v")
+        if has_null:
+            new_argv.append("-0")
+        new_argv.extend(argv[arg_idx:])
+    elif action == "decompress":
+        if archive_arg:
+            new_argv.append(archive_arg)
+        if has_v:
+            new_argv.append("-v")
+        new_argv.extend(argv[arg_idx:])
+    elif action == "list":
+        if archive_arg:
+            new_argv.append(archive_arg)
+        if has_v:
+            new_argv.append("-v")
+        new_argv.extend(argv[arg_idx:])
+
+    return new_argv
+
+
 def cmd_compress(args):
-    source = Path(args.target).resolve()
-    if not source.exists():
-        print(f"{RED}Error: Source target '{args.target}' does not exist.{RESET}", file=sys.stderr)
-        sys.exit(1)
+    is_null = getattr(args, "null", False)
+    paths = None
+    source = None
+
+    if is_null:
+        null_bytes = sys.stdin.buffer.read()
+        path_strs = [p.decode("utf-8", errors="surrogateescape").strip() for p in null_bytes.split(b"\x00") if p.strip()]
+        if not path_strs:
+            print(f"{RED}Error: No input paths received via stdin null-stream.{RESET}", file=sys.stderr)
+            sys.exit(1)
+        paths = [str(Path(p).resolve()) for p in path_strs]
+    else:
+        if not args.target:
+            print(f"{RED}Error: Source target or -0 (stdin) must be specified.{RESET}", file=sys.stderr)
+            sys.exit(1)
+        source = Path(args.target).resolve()
+        additional = getattr(args, "additional_targets", [])
+        if additional:
+            paths = [str(source)] + [str(Path(p).resolve()) for p in additional]
+            for p in paths:
+                if not Path(p).exists():
+                    print(f"{RED}Error: Source target '{p}' does not exist.{RESET}", file=sys.stderr)
+                    sys.exit(1)
+        else:
+            if not source.exists():
+                print(f"{RED}Error: Source target '{args.target}' does not exist.{RESET}", file=sys.stderr)
+                sys.exit(1)
 
     if args.output:
-        out_path = Path(args.output).resolve()
-    else:
-        downloads_dir = Path.home() / "Downloads"
-        if downloads_dir.exists():
-            out_path = downloads_dir / (source.name + ".apx")
+        if args.output == "-":
+            out_str = "-"
+            is_stdout = True
         else:
-            out_path = source.with_name(source.name + ".apx")
+            out_str = str(Path(args.output).resolve())
+            is_stdout = False
+    else:
+        is_stdout = False
+        downloads_dir = Path.home() / "Downloads"
+        default_name = source.name if source else "archive"
+        if downloads_dir.exists():
+            out_str = str(downloads_dir / (default_name + ".apx"))
+        else:
+            out_str = str((source.parent if source else Path.cwd()) / (default_name + ".apx"))
+
+    out_file = sys.stderr if is_stdout else sys.stdout
 
     mode_map = {
         "fast": Mode.FAST,
@@ -88,12 +201,15 @@ def cmd_compress(args):
         block_size = None
         display_block_mb = 4.0 if mode == Mode.FAST else 2.0
 
-    print(f"{BOLD}Compressing:{RESET}  {source}")
-    print(f"{BOLD}Destination:{RESET}  {out_path}")
-    print(f"{BOLD}Preset Mode:{RESET}  {CYAN}{mode.value.upper()}{RESET} (Block size: {display_block_mb:g} MB)")
-    if getattr(args, "exclude", None):
-        print(f"{BOLD}Exclusions:{RESET}   {YELLOW}{', '.join(args.exclude)}{RESET}")
-    print(f"{DIM}Running tournament optimization across CPU cores...{RESET}\n")
+    if not is_stdout and not args.quiet:
+        print(f"{BOLD}Compressing:{RESET}  {paths if paths else source}", file=out_file)
+        print(f"{BOLD}Destination:{RESET}  {out_str}", file=out_file)
+        print(f"{BOLD}Preset Mode:{RESET}  {CYAN}{mode.value.upper()}{RESET} (Block size: {display_block_mb:g} MB)", file=out_file)
+        if getattr(args, "base", None):
+            print(f"{BOLD}Base Archive:{RESET} {CYAN}{args.base}{RESET}", file=out_file)
+        if getattr(args, "exclude", None):
+            print(f"{BOLD}Exclusions:{RESET}   {YELLOW}{', '.join(args.exclude)}{RESET}", file=out_file)
+        print(f"{DIM}Running tournament optimization across CPU cores...{RESET}\n", file=out_file)
 
     last_p_time = 0.0
     def on_progress(done_bytes, total_bytes, winner, ratio):
@@ -106,59 +222,71 @@ def cmd_compress(args):
         bar_len = 24
         filled = int(bar_len * (pct / 100.0))
         bar = "█" * filled + "░" * (bar_len - filled)
-        sys.stdout.write(
+        out_file.write(
             f"\r{CYAN}[{bar}]{RESET} {pct:5.1f}% | {format_bytes(done_bytes):<9} | Winner: {GREEN}{winner:<32}{RESET} ({ratio:5.2f}x)"
         )
-        sys.stdout.flush()
+        out_file.flush()
 
     try:
         res = compress_archive(
-            str(source),
-            str(out_path),
+            source_path=str(source) if source and not paths else None,
+            output_archive_path=out_str,
             mode=mode,
             block_size=block_size,
             password=args.password,
             recovery=args.recovery,
             cdc=getattr(args, "cdc", False),
-            progress_callback=on_progress if not args.quiet else None,
+            progress_callback=on_progress if (not args.quiet and not is_stdout) else None,
             exclude_patterns=getattr(args, "exclude", None),
+            base_archive_path=getattr(args, "base", None),
+            paths=paths,
         )
     except Exception as e:
         print(f"\n{RED}Compression failed: {e}{RESET}", file=sys.stderr)
         sys.exit(1)
 
-    if not args.quiet:
-        print("\n")
+    if not args.quiet and not is_stdout:
+        print("\n", file=out_file)
 
-    speed_mb = (res["uncompressed_bytes"] / (1024 * 1024)) / res["elapsed"] if res["elapsed"] > 0 else 0.0
-    print(f"{BOLD}{GREEN}✓ Compression Complete!{RESET}")
-    print("=" * 60)
-    print(f"  {BOLD}Original Size:{RESET}    {format_bytes(res['uncompressed_bytes'])}")
-    print(f"  {BOLD}Apex Size:{RESET}        {format_bytes(res['compressed_bytes'])}")
-    print(f"  {BOLD}Space Saved:{RESET}      {GREEN}{res['space_saved_pct']:.2f}%{RESET}")
-    print(f"  {BOLD}Compression Ratio:{RESET}{CYAN}{BOLD} {res['ratio']:.2f}x{RESET}")
-    print(f"  {BOLD}Total Blocks:{RESET}     {res['blocks']}")
-    print(f"  {BOLD}Time Elapsed:{RESET}     {res['elapsed']:.2f}s ({speed_mb:.1f} MB/s)")
-    print(f"  {BOLD}Stream SHA-256:{RESET}   {DIM}{res['sha256']}{RESET}")
-    if res.get("encrypted"):
-        print(f"  {BOLD}Security:{RESET}        {GREEN}Authenticated Encryption (PBKDF2 + ChaCha20/AES + HMAC-SHA256){RESET}")
-    if res.get("recovery"):
-        print(f"  {BOLD}Self-Healing:{RESET}    {GREEN}Reed-Solomon Parity Records Attached{RESET}")
-    print("=" * 60)
+    if not is_stdout:
+        speed_mb = (res["uncompressed_bytes"] / (1024 * 1024)) / res["elapsed"] if res["elapsed"] > 0 else 0.0
+        print(f"{BOLD}{GREEN}✓ Compression Complete!{RESET}")
+        print("=" * 60)
+        print(f"  {BOLD}Original Size:{RESET}    {format_bytes(res['uncompressed_bytes'])}")
+        print(f"  {BOLD}Apex Size:{RESET}        {format_bytes(res['compressed_bytes'])}")
+        print(f"  {BOLD}Space Saved:{RESET}      {GREEN}{res['space_saved_pct']:.2f}%{RESET}")
+        print(f"  {BOLD}Compression Ratio:{RESET}{CYAN}{BOLD} {res['ratio']:.2f}x{RESET}")
+        print(f"  {BOLD}Total Blocks:{RESET}     {res['blocks']}")
+        if res.get("reused_chunks"):
+            print(f"  {BOLD}Reused Chunks:{RESET}    {GREEN}{res['reused_chunks']}{RESET} (incremental deduplication)")
+        print(f"  {BOLD}Time Elapsed:{RESET}     {res['elapsed']:.2f}s ({speed_mb:.1f} MB/s)")
+        print(f"  {BOLD}Stream SHA-256:{RESET}   {DIM}{res['sha256']}{RESET}")
+        if res.get("encrypted"):
+            print(f"  {BOLD}Security:{RESET}        {GREEN}Authenticated Encryption (PBKDF2 + ChaCha20/AES + HMAC-SHA256){RESET}")
+        if res.get("recovery"):
+            print(f"  {BOLD}Self-Healing:{RESET}    {GREEN}Reed-Solomon Parity Records Attached{RESET}")
+        print("=" * 60)
 
-    if args.verbose and res["block_records"]:
-        print(f"\n{BOLD}Block Tournament Breakdown:{RESET}")
-        print(f"  {'Block':<6} | {'Winner Pipeline':<36} | {'Uncompressed':<12} | {'Compressed':<12} | {'Ratio':<8}")
-        print("  " + "-" * 82)
-        for b in res["block_records"]:
-            print(f"  #{b['block']:<5} | {b['winner']:<36} | {format_bytes(b['uncompressed']):<12} | {format_bytes(b['compressed']):<12} | {b['ratio']:6.2f}x")
+        if args.verbose and res.get("block_records"):
+            print(f"\n{BOLD}Block Tournament Breakdown:{RESET}")
+            print(f"  {'Block':<6} | {'Winner Pipeline':<36} | {'Uncompressed':<12} | {'Compressed':<12} | {'Ratio':<8}")
+            print("  " + "-" * 82)
+            for b in res["block_records"]:
+                print(f"  #{b['block']:<5} | {b['winner']:<36} | {format_bytes(b['uncompressed']):<12} | {format_bytes(b['compressed']):<12} | {b['ratio']:6.2f}x")
 
 
 def cmd_decompress(args):
-    archive_path = Path(args.archive).resolve()
-    if not archive_path.exists():
-        print(f"{RED}Error: Archive '{args.archive}' not found.{RESET}", file=sys.stderr)
-        sys.exit(1)
+    archive_arg = args.archive
+    is_stdin = archive_arg == "-"
+
+    if not is_stdin:
+        archive_path = Path(archive_arg).resolve()
+        if not archive_path.exists():
+            print(f"{RED}Error: Archive '{archive_arg}' not found.{RESET}", file=sys.stderr)
+            sys.exit(1)
+        archive_str = str(archive_path)
+    else:
+        archive_str = "-"
 
     patterns = []
     if getattr(args, "include", None):
@@ -167,9 +295,40 @@ def cmd_decompress(args):
         patterns.extend(args.files)
     include_patterns = patterns if patterns else None
 
-    print(f"{BOLD}Decompressing:{RESET} {archive_path}")
-    if args.dest:
-        print(f"{BOLD}Destination:{RESET}   {args.dest}")
+    dest_dir = getattr(args, "dest", None)
+
+    # Foreign archive handling (zip, tar.gz, tar)
+    if not is_stdin and is_foreign_archive(archive_str):
+        print(f"{BOLD}Decompressing Foreign Archive:{RESET} {archive_str}")
+        if dest_dir:
+            print(f"{BOLD}Destination:{RESET}   {dest_dir}")
+        if include_patterns:
+            print(f"{BOLD}Selective Patterns:{RESET} {CYAN}{', '.join(include_patterns)}{RESET}")
+        try:
+            res = extract_foreign(
+                archive_str,
+                output_dir=dest_dir,
+                include_patterns=include_patterns,
+                quiet=getattr(args, "quiet", False),
+            )
+        except Exception as e:
+            print(f"\n{RED}Foreign extraction error: {e}{RESET}", file=sys.stderr)
+            sys.exit(1)
+        print(f"\n{BOLD}{GREEN}✓ Decompression Complete!{RESET}")
+        print("=" * 60)
+        print(f"  {BOLD}Files Restored:{RESET}   {res['files_extracted']:,}")
+        print(f"  {BOLD}Extracted Size:{RESET}   {format_bytes(res['total_uncompressed_bytes'])}")
+        print(f"  {BOLD}Format:{RESET}           {res['format'].upper()}")
+        print(f"  {BOLD}Time Elapsed:{RESET}     {res['elapsed']:.2f}s")
+        print("=" * 60)
+        return
+
+    if not is_stdin:
+        print(f"{BOLD}Decompressing:{RESET} {archive_str}")
+    else:
+        print(f"{BOLD}Decompressing:{RESET} <stdin>")
+    if dest_dir:
+        print(f"{BOLD}Destination:{RESET}   {dest_dir}")
     if include_patterns:
         print(f"{BOLD}Selective Patterns:{RESET} {CYAN}{', '.join(include_patterns)}{RESET}")
 
@@ -186,8 +345,8 @@ def cmd_decompress(args):
     quiet = getattr(args, "quiet", False)
     try:
         res = decompress_archive(
-            str(archive_path),
-            output_dir=args.dest,
+            archive_str,
+            output_dir=dest_dir,
             password=args.password,
             include_patterns=include_patterns,
             progress_callback=on_progress if not quiet else None,
@@ -203,6 +362,8 @@ def cmd_decompress(args):
     print("=" * 60)
     print(f"  {BOLD}Files Restored:{RESET}   {res['files_extracted']:,}")
     print(f"  {BOLD}Extracted Size:{RESET}   {format_bytes(res['total_uncompressed_bytes'])}")
+    if res.get("selective"):
+        print(f"  {BOLD}Index Selectivity:{RESET}{GREEN} {res['blocks_decoded']} of {res['total_blocks']} blocks decoded ({res['total_blocks'] - res['blocks_decoded']} skipped){RESET}")
     print(f"  {BOLD}Time Elapsed:{RESET}     {res['elapsed']:.2f}s")
     print(f"  {BOLD}Integrity:{RESET}        {GREEN}100% Bit-Exact SHA-256 Verified{RESET}")
     print("=" * 60)
@@ -225,7 +386,6 @@ def cmd_diff(args):
         sys.exit(1)
 
     if getattr(args, "json", False):
-        import json
         print(json.dumps(res, indent=2))
     else:
         print(format_diff_report(res))
@@ -245,6 +405,20 @@ def cmd_test(args):
     if not archive_path.exists():
         print(f"{RED}Error: Archive '{args.archive}' not found.{RESET}", file=sys.stderr)
         sys.exit(1)
+
+    if is_foreign_archive(str(archive_path)):
+        print(f"{BOLD}Verifying Foreign Archive:{RESET} {archive_path}")
+        try:
+            res = test_foreign(str(archive_path))
+        except Exception as e:
+            print(f"{RED}FAILED: {e}{RESET}", file=sys.stderr)
+            sys.exit(1)
+        print(f"{BOLD}{GREEN}✓ Foreign Archive Integrity PASSED!{RESET}")
+        print(f"  Format:              {res['format'].upper()}")
+        print(f"  Files in Manifest:   {res['total_files']}")
+        print(f"  Uncompressed Size:   {format_bytes(res['total_uncompressed_bytes'])}")
+        print(f"  Validation Time:     {res['elapsed']:.3f}s")
+        return
 
     print(f"{BOLD}Verifying Archive:{RESET} {archive_path}")
     try:
@@ -271,14 +445,66 @@ def cmd_list(args):
         print(f"{RED}Error: Archive '{args.archive}' not found.{RESET}", file=sys.stderr)
         sys.exit(1)
 
+    # Check foreign format
+    if is_foreign_archive(str(archive_path)):
+        list_foreign(str(archive_path), as_json=getattr(args, "json", False), quiet=getattr(args, "quiet", False))
+        return
+
     with open(archive_path, "rb") as f:
         flags, block_size, manifest, enc_key, mac_key = read_archive_header(f, password=args.password)
+        blocks_meta = scan_block_index(f, f.tell())
+
+    if getattr(args, "json", False):
+        data = {
+            "archive": archive_path.name,
+            "type": "directory" if manifest.is_dir else "file",
+            "block_size": block_size,
+            "encrypted": bool(flags & FLAG_ENCRYPTED),
+            "recovery": bool(flags & FLAG_RECOVERY),
+            "base_archive": manifest.base_archive,
+            "reused_chunks": manifest.reused_chunks,
+            "total_files": len(manifest.files),
+            "total_uncompressed_size": manifest.total_uncompressed_size,
+            "files": [
+                {
+                    "path": fe.rel_path,
+                    "size": fe.size,
+                    "mode": fe.mode,
+                    "mtime": fe.mtime,
+                    "is_dir": fe.is_dir,
+                    "is_symlink": fe.is_symlink,
+                    "block_id": fe.block_id,
+                    "offset": fe.offset,
+                    "length": fe.length,
+                    "solid_offset": fe.solid_offset,
+                }
+                for fe in manifest.files
+            ],
+            "blocks": [
+                {
+                    "block_id": b.block_id,
+                    "pipeline_id": b.pipeline_id,
+                    "uncompressed_length": b.uncomp_len,
+                    "compressed_length": b.comp_len,
+                    "crc32": b.crc,
+                    "solid_start": b.solid_start,
+                    "solid_end": b.solid_end,
+                    "ref_idx": b.ref_idx,
+                }
+                for b in blocks_meta
+            ],
+        }
+        print(json.dumps(data, indent=2))
+        return
 
     print(f"{BOLD}Archive:{RESET}     {archive_path.name}")
     print(f"{BOLD}Type:{RESET}        {'Directory / Solid Archive' if manifest.is_dir else 'Single File'}")
     print(f"{BOLD}Block Size:{RESET}  {block_size // (1024*1024)} MB")
     print(f"{BOLD}Encrypted:{RESET}   {'Yes (Authenticated Encryption: ChaCha20/AES + HMAC-SHA256)' if (flags & FLAG_ENCRYPTED) else 'No'}")
     print(f"{BOLD}Self-Healing:{RESET}{'Yes (Reed-Solomon Parity)' if (flags & FLAG_RECOVERY) else 'No'}")
+    if manifest.base_archive:
+        print(f"{BOLD}Base Archive:{RESET}{CYAN}{manifest.base_archive}{RESET}")
+        print(f"{BOLD}Reused Chunks:{RESET}{GREEN}{manifest.reused_chunks}{RESET}")
     print(f"{BOLD}Total Files:{RESET} {len(manifest.files)}")
     print(f"{BOLD}Total Size:{RESET}  {format_bytes(manifest.total_uncompressed_size)}\n")
 
@@ -288,6 +514,13 @@ def cmd_list(args):
         mtime_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(f.mtime))
         mode_str = oct(f.mode)[-4:]
         print(f"{mode_str:<10} | {format_bytes(f.size):<12} | {mtime_str:<20} | {f.rel_path}")
+
+    if getattr(args, "verbose", False) and blocks_meta:
+        print(f"\n{BOLD}Block Index Breakdown ({len(blocks_meta)} blocks):{RESET}")
+        print(f"  {'Block':<6} | {'Pipeline ID':<12} | {'Uncompressed':<14} | {'Compressed':<12} | {'CRC-32':<10}")
+        print("  " + "-" * 62)
+        for b in blocks_meta:
+            print(f"  #{b.block_id:<5} | {b.pipeline_id:<12} | {format_bytes(b.uncomp_len):<14} | {format_bytes(b.comp_len):<12} | {b.crc:08x}")
 
 
 def cmd_repair(args):
@@ -372,6 +605,37 @@ def cmd_info(args):
         print(f"{RED}Error: File '{args.file}' not found.{RESET}", file=sys.stderr)
         sys.exit(1)
 
+    # Check if this is an Apex archive
+    is_apx = False
+    try:
+        with open(file_path, "rb") as f:
+            if f.read(8) == MAGIC_HEADER:
+                is_apx = True
+    except OSError:
+        pass
+
+    if is_apx:
+        try:
+            with open(file_path, "rb") as f:
+                flags, block_size, manifest, _, _ = read_archive_header(f, password=getattr(args, "password", None))
+                blocks_info = scan_block_index(f, f.tell())
+            print(f"{BOLD}Apex Archive Info:{RESET} {file_path}")
+            print("=" * 60)
+            print(f"  {BOLD}Archive Type:{RESET}        {'Directory / Solid Archive' if manifest.is_dir else 'Single File'}")
+            print(f"  {BOLD}Block Size:{RESET}          {block_size // (1024 * 1024)} MB")
+            print(f"  {BOLD}Encrypted:{RESET}           {'Yes' if (flags & FLAG_ENCRYPTED) else 'No'}")
+            print(f"  {BOLD}Self-Healing:{RESET}        {'Yes' if (flags & FLAG_RECOVERY) else 'No'}")
+            print(f"  {BOLD}Total Files:{RESET}         {len(manifest.files)}")
+            print(f"  {BOLD}Total Uncompressed:{RESET}  {format_bytes(manifest.total_uncompressed_size)}")
+            print(f"  {BOLD}Total Blocks:{RESET}        {len(blocks_info)}")
+            if manifest.base_archive:
+                print(f"  {BOLD}Base Archive:{RESET}        {CYAN}{manifest.base_archive}{RESET}")
+                print(f"  {BOLD}Reused Chunks:{RESET}       {GREEN}{manifest.reused_chunks}{RESET} chunks reused from base")
+            print("=" * 60)
+            return
+        except Exception:
+            pass
+
     print(f"{BOLD}Analyzing Entropy & Information Content:{RESET} {file_path}")
     report = analyze_file(str(file_path))
 
@@ -389,34 +653,66 @@ def cmd_info(args):
     print("=" * 60)
 
 
+def cmd_mount(args):
+    archive_path = Path(args.archive).resolve()
+    if not archive_path.exists():
+        print(f"{RED}Error: Archive '{args.archive}' not found.{RESET}", file=sys.stderr)
+        sys.exit(1)
+
+    from apex.mount import mount_archive
+
+    print(f"{BOLD}Mounting Archive:{RESET} {archive_path}")
+    print(f"{BOLD}Mountpoint:{RESET}       {args.mountpoint}")
+    print(f"{BOLD}LRU Block Cache:{RESET}  {args.cache_size} MB")
+    print(f"{DIM}Press Ctrl+C to unmount.{RESET}\n")
+
+    try:
+        mount_archive(
+            str(archive_path),
+            args.mountpoint,
+            password=args.password,
+            cache_size_mb=args.cache_size,
+            foreground=args.foreground,
+        )
+    except Exception as e:
+        print(f"{RED}Mount error: {e}{RESET}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main():
+    sys.argv = preprocess_tar_args(sys.argv)
+
     parser = argparse.ArgumentParser(
         prog="apex",
         description="ApexCompress: The Adaptive Tournament Multi-Engine Compression Tool.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("-V", "--version", action="version", version="%(prog)s 1.2.0")
+    parser.add_argument("-V", "--version", action="version", version="%(prog)s 1.3.0")
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
     p_comp = subparsers.add_parser("compress", aliases=["c"], help="Compress a file or folder into an .apx archive (saved to ~/Downloads by default)")
-    p_comp.add_argument("target", help="File or folder to compress")
-    p_comp.add_argument("-o", "--output", help="Output .apx file path (default: ~/Downloads/<name>.apx)")
+    p_comp.add_argument("target", nargs="?", default=None, help="File or folder to compress")
+    p_comp.add_argument("additional_targets", nargs="*", help=argparse.SUPPRESS)
+    p_comp.add_argument("-o", "--output", help="Output .apx file path (default: ~/Downloads/<name>.apx, or '-' for stdout)")
     p_comp.add_argument("-m", "--mode", choices=["fast", "balanced", "ultra", "brute"], default="balanced", help="Compression preset")
     p_comp.add_argument("-b", "--block-size", type=float, default=None, help="Block size in megabytes (default: 4 MB for fast, 2 MB for balanced/ultra)")
     p_comp.add_argument("-p", "--password", help="Encrypt archive with AES-256-CTR & HMAC-SHA256")
     p_comp.add_argument("-r", "--recovery", action="store_true", help="Embed Reed-Solomon self-healing parity records")
     p_comp.add_argument("-e", "--exclude", action="append", help="Exclude pattern or folder (e.g. -e '.git' -e 'node_modules' -e '*.tmp')")
     p_comp.add_argument("--cdc", action="store_true", help="Enable Content-Defined Chunking for game patches and delta updates")
+    p_comp.add_argument("--base", help="Base archive for incremental compression (reuses matching chunks)")
+    p_comp.add_argument("-0", "--null", action="store_true", help="Read input file paths from standard input separated by null characters (from find -print0)")
     p_comp.add_argument("-v", "--verbose", action="store_true", help="Print block-level tournament winners")
     p_comp.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
     p_comp.set_defaults(func=cmd_compress)
 
     p_decomp = subparsers.add_parser("decompress", aliases=["x", "extract"], help="Decompress an .apx archive")
-    p_decomp.add_argument("archive", help="Path to .apx archive")
+    p_decomp.add_argument("archive", help="Path to .apx archive (or '-' for stdin)")
     p_decomp.add_argument("files", nargs="*", help="Specific files or paths to selectively extract")
-    p_decomp.add_argument("-d", "--dest", help="Destination folder or file path")
+    p_decomp.add_argument("-d", "-C", "--dest", help="Destination folder or file path")
     p_decomp.add_argument("-p", "--password", help="Password for encrypted archive")
     p_decomp.add_argument("-i", "--include", action="append", help="Include pattern/glob for selective extraction (e.g. -i '*.json')")
+    p_decomp.add_argument("-v", "--verbose", action="store_true", help="Verbose extraction")
     p_decomp.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
     p_decomp.set_defaults(func=cmd_decompress)
 
@@ -432,14 +728,24 @@ def main():
     p_comp_gen.set_defaults(func=cmd_completions)
 
     p_test = subparsers.add_parser("test", aliases=["t"], help="Test archive integrity without writing to disk")
-    p_test.add_argument("archive", help="Path to .apx archive")
+    p_test.add_argument("archive", help="Path to archive")
     p_test.add_argument("-p", "--password", help="Password for encrypted archive")
     p_test.set_defaults(func=cmd_test)
 
-    p_list = subparsers.add_parser("list", aliases=["l"], help="List contents of an .apx archive")
-    p_list.add_argument("archive", help="Path to .apx archive")
+    p_list = subparsers.add_parser("list", aliases=["l"], help="List contents of an archive")
+    p_list.add_argument("archive", help="Path to archive")
     p_list.add_argument("-p", "--password", help="Password for encrypted archive")
+    p_list.add_argument("--json", action="store_true", help="Output listing with block and file indices as JSON")
+    p_list.add_argument("-v", "--verbose", action="store_true", help="Verbose listing with block index")
     p_list.set_defaults(func=cmd_list)
+
+    p_mount = subparsers.add_parser("mount", help="Mount an .apx archive read-only as a virtual FUSE filesystem")
+    p_mount.add_argument("archive", help="Path to .apx archive")
+    p_mount.add_argument("mountpoint", help="Target directory to mount archive")
+    p_mount.add_argument("-p", "--password", help="Password for encrypted archive")
+    p_mount.add_argument("--cache-size", type=int, default=64, help="Block LRU cache size in MB (default: 64 MB)")
+    p_mount.add_argument("-f", "--foreground", action="store_true", default=True, help="Run FUSE mount in foreground")
+    p_mount.set_defaults(func=cmd_mount)
 
     p_repair = subparsers.add_parser("repair", aliases=["fix", "heal"], help="Self-heal a damaged .apx archive using recovery parity")
     p_repair.add_argument("archive", help="Path to damaged .apx archive")
@@ -453,8 +759,9 @@ def main():
     p_bench.add_argument("--full", action="store_true", help="Benchmark entire file without 16 MB sample limit")
     p_bench.set_defaults(func=cmd_benchmark)
 
-    p_info = subparsers.add_parser("info", aliases=["i"], help="Analyze Shannon entropy and file compressibility")
-    p_info.add_argument("file", help="File to analyze")
+    p_info = subparsers.add_parser("info", aliases=["i"], help="Analyze Shannon entropy and file compressibility (or archive reuse info)")
+    p_info.add_argument("file", help="File or archive to analyze")
+    p_info.add_argument("-p", "--password", help="Password if archive is encrypted")
     p_info.set_defaults(func=cmd_info)
 
     if len(sys.argv) == 1:
@@ -467,7 +774,7 @@ def main():
         "compress", "c", "decompress", "x", "extract",
         "diff", "d", "completions",
         "test", "t", "list", "l", "benchmark", "b", "info", "i",
-        "repair", "fix", "heal",
+        "repair", "fix", "heal", "mount",
         "-h", "--help", "-v", "-V", "--version"
     }
     first_arg = sys.argv[1]

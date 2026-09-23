@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.6.0.schema.json
+PackageIdentifier: qxmcu.apex
+PackageVersion: 1.3.0
+PackageName: Apex
+Publisher: Apex Compression Lab
+License: Apache-2.0
+LicenseUrl: https://raw.githubusercontent.com/qxmcu/apex/main/LICENSE
+ShortDescription: Adaptive Tournament Multi-Engine Compression Tool & Next-Gen Container
+Moniker: apex
+Tags:
+  - compression
+  - archive
+  - zstd
+  - brotli
+  - lzma
+  - tar
+Commands:
+  - apex
+Installers:
+  - Architecture: x64
+    InstallerType: zip
+    InstallerUrl: https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-windows-x86_64.zip
+    InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000000
+    NestedInstallerType: portable
+    NestedInstallerFiles:
+      - RelativeFilePath: apex.exe
+        PortableCommandAlias: apex
+ManifestType: singleton
+ManifestVersion: 1.6.0

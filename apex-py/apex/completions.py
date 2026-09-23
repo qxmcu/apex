@@ -7,7 +7,7 @@ _apex_completions() {
     local cur prev words cword
     _init_completion || return
 
-    local commands="compress c decompress x extract test t list l repair fix heal benchmark b info i diff d completions"
+    local commands="compress c decompress x extract test t list l repair fix heal benchmark b info i diff d completions mount"
     local modes="fast balanced ultra brute"
     local shells="bash zsh fish"
 
@@ -24,17 +24,17 @@ _apex_completions() {
                     COMPREPLY=( $(compgen -W "$modes" -- "$cur") )
                     return 0
                     ;;
-                -o|--output|-b|--block-size|-p|--password)
+                -o|--output|-b|--block-size|-p|--password|--base)
                     _filedir
                     return 0
                     ;;
             esac
-            COMPREPLY=( $(compgen -W "-o --output -m --mode -b --block-size -p --password -r --recovery --cdc -v --verbose -q --quiet -h --help" -- "$cur") )
+            COMPREPLY=( $(compgen -W "-o --output -m --mode -b --block-size -p --password -r --recovery --cdc --base -0 --null -v --verbose -q --quiet -h --help" -- "$cur") )
             _filedir
             ;;
         decompress|x|extract)
             case "$prev" in
-                -d|--dest)
+                -d|-C|--dest)
                     _filedir -d
                     return 0
                     ;;
@@ -42,15 +42,23 @@ _apex_completions() {
                     return 0
                     ;;
             esac
-            COMPREPLY=( $(compgen -W "-d --dest -p --password -i --include -q --quiet -h --help" -- "$cur") )
+            COMPREPLY=( $(compgen -W "-d -C --dest -p --password -i --include -v --verbose -q --quiet -h --help" -- "$cur") )
             _filedir apx
             ;;
         diff|d)
             COMPREPLY=( $(compgen -W "-p --password --json -h --help" -- "$cur") )
             _filedir apx
             ;;
-        test|t|list|l)
+        test|t)
             COMPREPLY=( $(compgen -W "-p --password -h --help" -- "$cur") )
+            _filedir apx
+            ;;
+        list|l)
+            COMPREPLY=( $(compgen -W "-p --password --json -v --verbose -h --help" -- "$cur") )
+            _filedir apx
+            ;;
+        mount)
+            COMPREPLY=( $(compgen -W "-p --password --cache-size -f --foreground -h --help" -- "$cur") )
             _filedir apx
             ;;
         repair|fix|heal)
@@ -64,11 +72,11 @@ _apex_completions() {
             _filedir apx
             ;;
         benchmark|b)
-            COMPREPLY=( $(compgen -W "--max-sample-mb -h --help" -- "$cur") )
+            COMPREPLY=( $(compgen -W "--max-sample-mb --full -h --help" -- "$cur") )
             _filedir
             ;;
         info|i)
-            COMPREPLY=( $(compgen -W "-h --help" -- "$cur") )
+            COMPREPLY=( $(compgen -W "-p --password -h --help" -- "$cur") )
             _filedir
             ;;
         completions)
@@ -98,12 +106,13 @@ _apex() {
         't:Alias for test'
         'list:List contents of an .apx archive'
         'l:Alias for list'
+        'mount:Mount an .apx archive read-only as a virtual FUSE filesystem'
         'repair:Self-heal damaged .apx archive using recovery parity'
         'fix:Alias for repair'
         'heal:Alias for repair'
         'benchmark:Benchmark shootout against standard archivers'
         'b:Alias for benchmark'
-        'info:Analyze Shannon entropy and compressibility'
+        'info:Analyze Shannon entropy, compressibility, or archive info'
         'i:Alias for info'
         'completions:Generate shell completion script'
     )
@@ -128,16 +137,19 @@ _apex() {
                         '(-p --password)'{-p,--password}'[Password for encryption]:password:' \\
                         '(-r --recovery)'{-r,--recovery}'[Embed Reed-Solomon parity records]' \\
                         '--cdc[Enable Content-Defined Chunking]' \\
+                        '--base[Base archive for incremental deduplication]:file:_files -g "*.apx"' \\
+                        '(-0 --null)'{-0,--null}'[Read null-delimited file list from stdin]' \\
                         '(-v --verbose)'{-v,--verbose}'[Verbose output]' \\
                         '(-q --quiet)'{-q,--quiet}'[Quiet mode]' \\
                         '*:target:_files'
                     ;;
                 decompress|x|extract)
                     _arguments \\
-                        '(-d --dest)'{-d,--dest}'[Destination folder]:dir:_files -/' \\
+                        '(-d -C --dest)'{-d,-C,--dest}'[Destination folder]:dir:_files -/' \\
                         '(-p --password)'{-p,--password}'[Archive password]:password:' \\
                         '*-i[Include pattern for selective extraction]:pattern:' \\
                         '*--include[Include pattern for selective extraction]:pattern:' \\
+                        '(-v --verbose)'{-v,--verbose}'[Verbose output]' \\
                         '(-q --quiet)'{-q,--quiet}'[Quiet mode]' \\
                         '1:archive:_files -g "*.apx"' \\
                         '*:files to extract:_files'
@@ -149,10 +161,25 @@ _apex() {
                         '1:first archive:_files -g "*.apx"' \\
                         '2:second archive:_files -g "*.apx"'
                     ;;
-                test|t|list|l)
+                test|t)
                     _arguments \\
                         '(-p --password)'{-p,--password}'[Password]:password:' \\
                         '1:archive:_files -g "*.apx"'
+                    ;;
+                list|l)
+                    _arguments \\
+                        '(-p --password)'{-p,--password}'[Password]:password:' \\
+                        '--json[Output listing as JSON]' \\
+                        '(-v --verbose)'{-v,--verbose}'[Verbose listing]' \\
+                        '1:archive:_files -g "*.apx"'
+                    ;;
+                mount)
+                    _arguments \\
+                        '(-p --password)'{-p,--password}'[Password]:password:' \\
+                        '--cache-size[LRU cache size in MB]:mb:' \\
+                        '(-f --foreground)'{-f,--foreground}'[Run in foreground]' \\
+                        '1:archive:_files -g "*.apx"' \\
+                        '2:mountpoint:_files -/'
                     ;;
                 repair|fix|heal)
                     _arguments \\
@@ -163,10 +190,12 @@ _apex() {
                 benchmark|b)
                     _arguments \\
                         '--max-sample-mb[Max sample size in MB]:mb:' \\
+                        '--full[Benchmark full file]' \\
                         '1:file:_files'
                     ;;
                 info|i)
                     _arguments \\
+                        '(-p --password)'{-p,--password}'[Password]:password:' \\
                         '1:file:_files'
                     ;;
                 completions)
@@ -212,6 +241,7 @@ complete -f -c apex -n '__fish_apex_needs_command' -a test -d 'Test archive inte
 complete -f -c apex -n '__fish_apex_needs_command' -a t -d 'Test alias'
 complete -f -c apex -n '__fish_apex_needs_command' -a list -d 'List archive contents'
 complete -f -c apex -n '__fish_apex_needs_command' -a l -d 'List alias'
+complete -f -c apex -n '__fish_apex_needs_command' -a mount -d 'Mount archive as virtual filesystem'
 complete -f -c apex -n '__fish_apex_needs_command' -a repair -d 'Self-heal damaged archive'
 complete -f -c apex -n '__fish_apex_needs_command' -a fix -d 'Repair alias'
 complete -f -c apex -n '__fish_apex_needs_command' -a benchmark -d 'Shootout benchmark'
@@ -227,11 +257,17 @@ complete -c apex -n '__fish_apex_using_command compress' -s m -l mode -a 'fast b
 complete -c apex -n '__fish_apex_using_command compress' -s o -l output -r -d 'Output file'
 complete -c apex -n '__fish_apex_using_command compress' -s r -l recovery -d 'Reed-Solomon recovery records'
 complete -c apex -n '__fish_apex_using_command compress' -l cdc -d 'Content-Defined Chunking'
+complete -c apex -n '__fish_apex_using_command compress' -l base -r -d 'Base archive for incremental deduplication'
+complete -c apex -n '__fish_apex_using_command compress' -s 0 -l null -d 'Null-delimited stdin input'
 
 complete -c apex -n '__fish_apex_using_command decompress' -s d -l dest -r -d 'Destination directory'
+complete -c apex -n '__fish_apex_using_command decompress' -s C -r -d 'Destination directory'
 complete -c apex -n '__fish_apex_using_command decompress' -s i -l include -r -d 'Include pattern for selective extraction'
 
+complete -c apex -n '__fish_apex_using_command list' -l json -d 'Output listing as JSON'
 complete -c apex -n '__fish_apex_using_command diff' -l json -d 'Output diff as JSON'
+
+complete -c apex -n '__fish_apex_using_command mount' -l cache-size -d 'LRU cache size in MB'
 
 complete -c apex -n '__fish_apex_using_command completions' -a 'bash zsh fish' -d 'Shell type'
 """

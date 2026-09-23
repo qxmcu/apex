@@ -57,10 +57,27 @@ class FileEntry:
     size: int
     mode: int
     mtime: float
-    offset: int = 0  # Offset in uncompressed solid stream
+    offset: int = 0  # Offset within block (or uncompressed solid stream)
     is_symlink: bool = False
     link_target: str = ""
     is_dir: bool = False
+    block_id: int = 0  # 0-indexed block ID where file starts
+    length: int = 0  # Length in bytes
+    solid_offset: int = 0  # Offset in uncompressed solid stream
+
+
+@dataclass
+class BlockMeta:
+    block_id: int
+    file_offset: int  # Byte position where 13-byte block header starts
+    payload_offset: int  # Byte position where payload starts
+    pipeline_id: int
+    uncomp_len: int
+    comp_len: int
+    crc: int
+    ref_idx: Optional[int] = None
+    solid_start: int = 0
+    solid_end: int = 0
 
 
 @dataclass
@@ -69,9 +86,11 @@ class ArchiveManifest:
     root_name: str
     total_uncompressed_size: int
     files: List[FileEntry] = field(default_factory=list)
+    base_archive: str = ""
+    reused_chunks: int = 0
 
     def to_json(self) -> str:
-        return json.dumps({
+        payload = {
             "is_dir": self.is_dir,
             "root_name": self.root_name,
             "total_uncompressed_size": self.total_uncompressed_size,
@@ -81,14 +100,22 @@ class ArchiveManifest:
                     "size": f.size,
                     "mode": f.mode,
                     "mtime": f.mtime,
+                    "block_id": f.block_id,
                     "offset": f.offset,
+                    "length": f.length if f.length or f.size == 0 else f.size,
+                    "solid_offset": f.solid_offset,
                     "is_symlink": f.is_symlink,
                     "link_target": f.link_target,
                     "is_dir": f.is_dir,
                 }
                 for f in self.files
             ],
-        })
+        }
+        if self.base_archive:
+            payload["base_archive"] = self.base_archive
+        if self.reused_chunks:
+            payload["reused_chunks"] = self.reused_chunks
+        return json.dumps(payload)
 
     @classmethod
     def from_json(cls, json_str: str) -> "ArchiveManifest":
@@ -102,15 +129,24 @@ class ArchiveManifest:
             if ".." in parts:
                 raise ValueError(f"Path traversal detected in archive manifest: {rel_path}")
             
+            size = f["size"]
+            block_id = f.get("block_id", 0)
+            offset = f.get("offset", 0)
+            length = f.get("length", size)
+            solid_offset = f.get("solid_offset", offset)
+
             files.append(FileEntry(
                 rel_path=rel_path,
-                size=f["size"],
+                size=size,
                 mode=f.get("mode", 0o644),
                 mtime=f.get("mtime", time.time()),
-                offset=f.get("offset", 0),
+                offset=offset,
                 is_symlink=f.get("is_symlink", False),
                 link_target=f.get("link_target", ""),
                 is_dir=f.get("is_dir", False),
+                block_id=block_id,
+                length=length,
+                solid_offset=solid_offset,
             ))
             
         return cls(
@@ -118,6 +154,8 @@ class ArchiveManifest:
             root_name=data.get("root_name", "archive"),
             total_uncompressed_size=data.get("total_uncompressed_size", 0),
             files=files,
+            base_archive=data.get("base_archive", ""),
+            reused_chunks=data.get("reused_chunks", 0),
         )
 
 
@@ -171,6 +209,9 @@ def build_manifest(
             mode=stat.st_mode,
             mtime=stat.st_mtime,
             offset=0,
+            block_id=0,
+            length=stat.st_size,
+            solid_offset=0,
         )
         files.append(entry)
         total_size = stat.st_size
@@ -266,7 +307,10 @@ def build_manifest(
                     size=0,
                     mode=mode,
                     mtime=mtime,
-                    offset=current_offset,
+                    offset=current_offset % chunk_size,
+                    block_id=current_offset // chunk_size,
+                    length=0,
+                    solid_offset=current_offset,
                     is_symlink=True,
                     link_target=target,
                 ))
@@ -276,7 +320,10 @@ def build_manifest(
                     size=0,
                     mode=mode,
                     mtime=mtime,
-                    offset=current_offset,
+                    offset=current_offset % chunk_size,
+                    block_id=current_offset // chunk_size,
+                    length=0,
+                    solid_offset=current_offset,
                     is_dir=True,
                 ))
             else:
@@ -285,7 +332,10 @@ def build_manifest(
                     size=size,
                     mode=mode,
                     mtime=mtime,
-                    offset=current_offset,
+                    offset=current_offset % chunk_size,
+                    block_id=current_offset // chunk_size,
+                    length=size,
+                    solid_offset=current_offset,
                 ))
                 current_offset += size
                 file_records.append((full_p, size))
@@ -327,9 +377,128 @@ def build_manifest(
         raise ValueError(f"Unsupported filesystem object: {target_path}")
 
 
+def build_manifest_from_paths(
+    paths: List[str],
+    chunk_size: int = DEFAULT_FAST_BLOCK_SIZE,
+    exclude_patterns: Optional[List[str]] = None,
+    root_name: str = "archive",
+) -> Tuple[ArchiveManifest, Generator[bytes, None, None]]:
+    """
+    Builds an ArchiveManifest from an explicit list of file/dir paths (e.g. from find -print0 or CLI args)
+    and yields sequential uncompressed chunks as a continuous solid stream.
+    """
+    files: List[FileEntry] = []
+    current_offset = 0
+    file_records: List[Tuple[str, int]] = []
+
+    norm_paths = []
+    for raw_p in paths:
+        s = str(raw_p).strip()
+        if not s:
+            continue
+        p = Path(s)
+        if not p.exists() and not p.is_symlink():
+            continue
+        norm_paths.append(s)
+
+    for item in sorted(norm_paths):
+        p = Path(item)
+        rel = item.replace("\\", "/").lstrip("/")
+        if rel.startswith("./"):
+            rel = rel[2:]
+        is_link = p.is_symlink()
+        is_dir_entry = p.is_dir() if not is_link else False
+        if should_exclude(rel, p.name, is_dir_entry, exclude_patterns):
+            continue
+
+        if is_link:
+            target = os.readlink(str(p))
+            try:
+                st = p.lstat()
+                mode = st.st_mode
+                mtime = st.st_mtime
+            except OSError:
+                mode = 0o777
+                mtime = time.time()
+            files.append(FileEntry(
+                rel_path=rel,
+                size=0,
+                mode=mode,
+                mtime=mtime,
+                offset=current_offset % chunk_size,
+                block_id=current_offset // chunk_size,
+                length=0,
+                solid_offset=current_offset,
+                is_symlink=True,
+                link_target=target,
+            ))
+        elif is_dir_entry:
+            st = p.stat()
+            files.append(FileEntry(
+                rel_path=rel,
+                size=0,
+                mode=st.st_mode,
+                mtime=st.st_mtime,
+                offset=current_offset % chunk_size,
+                block_id=current_offset // chunk_size,
+                length=0,
+                solid_offset=current_offset,
+                is_dir=True,
+            ))
+        elif p.is_file():
+            st = p.stat()
+            size = st.st_size
+            files.append(FileEntry(
+                rel_path=rel,
+                size=size,
+                mode=st.st_mode,
+                mtime=st.st_mtime,
+                offset=current_offset % chunk_size,
+                block_id=current_offset // chunk_size,
+                length=size,
+                solid_offset=current_offset,
+            ))
+            current_offset += size
+            file_records.append((str(p), size))
+
+    manifest = ArchiveManifest(
+        is_dir=True,
+        root_name=root_name,
+        total_uncompressed_size=current_offset,
+        files=files,
+    )
+
+    def path_stream():
+        buf = bytearray(chunk_size)
+        mv = memoryview(buf)
+        offset = 0
+        for fp_str, f_size in file_records:
+            if f_size == 0:
+                continue
+            try:
+                with open(fp_str, "rb", buffering=0) as f:
+                    rem = f_size
+                    while rem > 0:
+                        to_read = min(rem, chunk_size - offset)
+                        n = f.readinto(mv[offset:offset + to_read])
+                        if not n:
+                            break
+                        offset += n
+                        rem -= n
+                        if offset == chunk_size:
+                            yield bytes(buf)
+                            offset = 0
+            except OSError:
+                pass
+        if offset > 0:
+            yield bytes(buf[:offset])
+
+    return manifest, path_stream()
+
+
 def compress_archive(
-    source_path: str,
-    output_archive_path: str,
+    source_path: Optional[str] = None,
+    output_archive_path: str = "-",
     mode: Mode = Mode.BALANCED,
     block_size: Optional[int] = None,
     password: Optional[str] = None,
@@ -337,17 +506,75 @@ def compress_archive(
     cdc: bool = False,
     progress_callback: Optional[Callable[[int, int, str, float], None]] = None,
     exclude_patterns: Optional[List[str]] = None,
+    base_archive_path: Optional[str] = None,
+    paths: Optional[List[str]] = None,
 ) -> Dict:
     """
     Compresses a file or directory into a high-efficiency `.apx` archive.
     Supports authenticated encryption, self-healing recovery records, block deduplication,
-    FastCDC content-defined chunking, and multi-core pipelined block compression.
-    Writes atomically via a sibling temp file.
+    FastCDC content-defined chunking, incremental base deduplication, and multi-core pipelined block compression.
+    Writes atomically via a sibling temp file or streams to stdout.
     """
     if block_size is None:
         block_size = DEFAULT_FAST_BLOCK_SIZE if mode == Mode.FAST else DEFAULT_BLOCK_SIZE
 
-    manifest, stream = build_manifest(source_path, chunk_size=block_size, exclude_patterns=exclude_patterns)
+    if paths is not None:
+        manifest, stream = build_manifest_from_paths(paths, chunk_size=block_size, exclude_patterns=exclude_patterns)
+    elif source_path is not None:
+        manifest, stream = build_manifest(source_path, chunk_size=block_size, exclude_patterns=exclude_patterns)
+    else:
+        raise ValueError("Either source_path or paths must be provided to compress_archive.")
+
+    # Incremental Base Archive Indexing
+    base_chunks: Dict[bytes, Tuple[int, int, bytes, int, str]] = {}
+    reused_chunks_count = 0
+    reused_bytes = 0
+
+    if base_archive_path:
+        base_p = Path(base_archive_path).resolve()
+        if not base_p.exists():
+            raise FileNotFoundError(f"Base archive not found: {base_archive_path}")
+        with open(base_p, "rb") as base_f:
+            b_flags, b_block_size, b_manifest, b_enc_key, b_mac_key = read_archive_header(base_f, password=password)
+            base_blocks = scan_block_index(base_f, base_f.tell())
+            base_uncomp_cache: Dict[int, bytes] = {}
+            base_comp_cache: Dict[int, Tuple[int, int, bytes, int]] = {}
+            for b in base_blocks:
+                if b.pipeline_id == PIPELINE_DEDUP_REF:
+                    if b.ref_idx is not None and b.ref_idx in base_comp_cache:
+                        base_comp_cache[b.block_id] = base_comp_cache[b.ref_idx]
+                        if b.ref_idx in base_uncomp_cache:
+                            uncomp_data = base_uncomp_cache[b.ref_idx]
+                            base_uncomp_cache[b.block_id] = uncomp_data
+                            h = hashlib.blake2b(uncomp_data, digest_size=32).digest()
+                            b_pid, b_ulen, b_pay, b_crc = base_comp_cache[b.ref_idx]
+                            base_chunks[h] = (b_pid, b_ulen, b_pay, b_crc, f"Base ref #{b.ref_idx}")
+                else:
+                    base_f.seek(b.payload_offset)
+                    payload = base_f.read(b.comp_len)
+                    if b_flags & FLAG_ENCRYPTED:
+                        payload = decrypt_payload(payload, b_enc_key, b_mac_key)
+                    try:
+                        uncomp_data = decompress_chunk(payload, b.pipeline_id)
+                        if zlib.crc32(uncomp_data) == b.crc:
+                            base_uncomp_cache[b.block_id] = uncomp_data
+                            base_comp_cache[b.block_id] = (b.pipeline_id, b.uncomp_len, payload, b.crc)
+                            h = hashlib.blake2b(uncomp_data, digest_size=32).digest()
+                            base_chunks[h] = (b.pipeline_id, b.uncomp_len, payload, b.crc, f"Base #{b.block_id}")
+                    except Exception:
+                        pass
+        manifest.base_archive = base_p.name
+
+        # If base is provided and data size is manageable (< 128 MB), pre-count reuse for manifest accuracy
+        if manifest.total_uncompressed_size < 128 * 1024 * 1024:
+            buffered_stream_blocks = list(stream)
+            stream = iter(buffered_stream_blocks)
+            pre_count = 0
+            for b_data in buffered_stream_blocks:
+                h = hashlib.blake2b(b_data, digest_size=32).digest()
+                if h in base_chunks:
+                    pre_count += 1
+            manifest.reused_chunks = pre_count
 
     manifest_bytes = manifest.to_json().encode("utf-8")
     comp_manifest = zlib.compress(manifest_bytes, level=9)
@@ -379,18 +606,30 @@ def compress_archive(
 
     start_time = time.perf_counter()
 
-    dest_p = Path(output_archive_path).resolve()
-    dest_p.parent.mkdir(parents=True, exist_ok=True)
-    temp_archive_path = dest_p.parent / f".{dest_p.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}.apx"
+    is_stdout = (output_archive_path == "-")
+    if is_stdout:
+        dest_p = None
+        temp_archive_path = None
+    else:
+        dest_p = Path(output_archive_path).resolve()
+        dest_p.parent.mkdir(parents=True, exist_ok=True)
+        temp_archive_path = dest_p.parent / f".{dest_p.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}.apx"
     write_success = False
 
     try:
-        with open(temp_archive_path, "wb", buffering=4 * 1024 * 1024) as out:
+        out_context = open(temp_archive_path, "wb", buffering=4 * 1024 * 1024) if not is_stdout else sys.stdout.buffer
+        # If is_stdout, out_context is not a newly opened context manager
+        def get_out_handle():
+            if is_stdout:
+                import contextlib
+                return contextlib.nullcontext(sys.stdout.buffer)
+            return open(temp_archive_path, "wb", buffering=4 * 1024 * 1024)
+
+        with get_out_handle() as out:
             # 1. Magic Header (8 bytes)
             out.write(MAGIC_HEADER)
 
             # 2. Container Header:
-            # flags (uint16), block_size (uint32), manifest_raw_len (uint32), manifest_comp_len (uint32)
             out.write(struct.pack(
                 "<HIII",
                 flags,
@@ -406,7 +645,7 @@ def compress_archive(
             # Manifest payload
             out.write(manifest_payload)
 
-            # Multi-Core Block Worker Pool (tuned to logical CPU core count)
+            # Multi-Core Block Worker Pool
             workers = min(os.cpu_count() or 4, 4)
             max_inflight = 32
 
@@ -422,10 +661,9 @@ def compress_archive(
                     nonlocal total_compressed
                     item = inflight.pop(b_idx)
                     if len(item) == 5:
-                        # Deduplicated block: (pipeline_id, uncomp_len, payload, crc, winner_name)
+                        # Deduplicated or base-reused block: (pipeline_id, uncomp_len, payload, crc, winner_name)
                         pid, u_len, payload, b_crc, w_name = item
                     else:
-                        # Worker future: (fut, u_len)
                         fut, u_len = item
                         pid, payload, w_name, b_crc = fut.result()
 
@@ -457,8 +695,6 @@ def compress_archive(
                 def reader_worker():
                     try:
                         if cdc:
-                            # Content-Defined Chunking (FastCDC with Gear Hash):
-                            # Solves byte-shift boundary problems for delta testing, DLCs, and game patches
                             min_chunk = max(512 * 1024, block_size // 2)
                             max_chunk = block_size * 2
                             avg_chunk = block_size
@@ -467,7 +703,6 @@ def compress_archive(
                                 b_crc = zlib.crc32(block_data)
                                 chunk_queue.put((block_data, b_crc))
                         else:
-                            # Direct Zero-Copy Block Streaming from pre-buffered stream
                             for block_data in stream:
                                 overall_hasher.update(block_data)
                                 b_crc = zlib.crc32(block_data)
@@ -481,7 +716,7 @@ def compress_archive(
                 reader_t.start()
 
                 def dispatch_block(b_data: bytes, b_crc: int):
-                    nonlocal total_blocks, total_uncompressed, next_write_idx
+                    nonlocal total_blocks, total_uncompressed, next_write_idx, reused_chunks_count, reused_bytes
                     b_idx = total_blocks
                     total_blocks += 1
 
@@ -491,12 +726,17 @@ def compress_archive(
                     if recovery:
                         raw_blocks_for_recovery.append(b_data)
 
-                    # Cryptographic BLAKE2b (256-bit) collision-proof deduplication verification
                     crypto_key = hashlib.blake2b(b_data, digest_size=32).digest()
                     if crypto_key in seen_crypto_hashes:
                         prev_idx = seen_crypto_hashes[crypto_key]
                         payload = struct.pack("<I", prev_idx)
                         inflight[b_idx] = (PIPELINE_DEDUP_REF, u_len, payload, b_crc, f"Deduplicated (ref #{prev_idx})")
+                    elif base_chunks and crypto_key in base_chunks:
+                        b_pid, b_ulen, b_payload, b_crc_val, b_name = base_chunks[crypto_key]
+                        reused_chunks_count += 1
+                        reused_bytes += u_len
+                        inflight[b_idx] = (b_pid, b_ulen, b_payload, b_crc_val, f"Reused from base ({b_name})")
+                        seen_crypto_hashes[crypto_key] = b_idx
                     else:
                         seen_crypto_hashes[crypto_key] = b_idx
                         fut = executor.submit(_compress_worker, b_data, mode, b_crc)
@@ -515,7 +755,6 @@ def compress_archive(
                     b_data, b_crc = item
                     dispatch_block(b_data, b_crc)
 
-                # Drain all remaining inflight blocks in order
                 while next_write_idx < total_blocks:
                     write_block(next_write_idx)
                     next_write_idx += 1
@@ -537,30 +776,37 @@ def compress_archive(
                 out.write(parity_data)
 
             out.flush()
-            try:
-                os.fsync(out.fileno())
-            except OSError:
-                pass
+            if not is_stdout:
+                try:
+                    os.fsync(out.fileno())
+                except OSError:
+                    pass
 
-        # Atomically promote sibling temp file to destination archive
-        os.replace(temp_archive_path, dest_p)
+        if not is_stdout:
+            os.replace(temp_archive_path, dest_p)
         write_success = True
     finally:
-        if not write_success and temp_archive_path.exists():
+        if not is_stdout and not write_success and temp_archive_path and temp_archive_path.exists():
             try:
                 temp_archive_path.unlink()
             except OSError:
                 pass
 
     elapsed = time.perf_counter() - start_time
-    archive_file_size = os.path.getsize(dest_p)
+    if is_stdout:
+        archive_file_size = total_compressed
+        archive_name = "<stdout>"
+    else:
+        archive_file_size = os.path.getsize(dest_p)
+        archive_name = str(dest_p)
+
     overall_ratio = (total_uncompressed / archive_file_size) if archive_file_size > 0 else 1.0
     space_saved = (1.0 - (archive_file_size / total_uncompressed)) * 100.0 if total_uncompressed > 0 else 0.0
 
     return {
         "status": "SUCCESS",
-        "source": source_path,
-        "archive": str(dest_p),
+        "source": source_path or (", ".join(str(p) for p in paths[:3]) if paths else ""),
+        "archive": archive_name,
         "uncompressed_bytes": total_uncompressed,
         "compressed_bytes": archive_file_size,
         "ratio": overall_ratio,
@@ -571,6 +817,9 @@ def compress_archive(
         "block_records": block_records,
         "encrypted": bool(flags & FLAG_ENCRYPTED),
         "recovery": bool(flags & FLAG_RECOVERY),
+        "base_archive": manifest.base_archive,
+        "reused_chunks": reused_chunks_count,
+        "reused_bytes": reused_bytes,
     }
 
 
@@ -604,6 +853,62 @@ def read_archive_header(
         raise ValueError(f"Corrupted archive manifest: {e}") from e
 
     return flags, block_size, manifest, enc_key, mac_key
+
+
+def scan_block_index(f: BinaryIO, start_pos: int) -> List[BlockMeta]:
+    """
+    Rapidly scans block headers to build a block index table mapping each block's
+    location, sizes, pipeline ID, CRC, and uncompressed stream offsets in < 1ms.
+    """
+    cur_pos = f.tell()
+    f.seek(start_pos)
+    blocks: List[BlockMeta] = []
+    header_struct = struct.Struct("<BIII")
+    solid_curr = 0
+    b_idx = 0
+
+    while True:
+        hdr_pos = f.tell()
+        hdr_bytes = f.read(header_struct.size)
+        if not hdr_bytes or len(hdr_bytes) < header_struct.size:
+            break
+        pid, u_len, c_len, crc = header_struct.unpack(hdr_bytes)
+        if pid == EOF_PIPELINE_ID:
+            break
+
+        payload_pos = f.tell()
+        ref_idx = None
+        if pid == PIPELINE_DEDUP_REF:
+            payload = f.read(c_len)
+            if len(payload) >= 4:
+                ref_idx = struct.unpack("<I", payload[:4])[0]
+        else:
+            try:
+                f.seek(c_len, os.SEEK_CUR)
+            except Exception:
+                f.read(c_len)
+
+        blocks.append(BlockMeta(
+            block_id=b_idx,
+            file_offset=hdr_pos,
+            payload_offset=payload_pos,
+            pipeline_id=pid,
+            uncomp_len=u_len,
+            comp_len=c_len,
+            crc=crc,
+            ref_idx=ref_idx,
+            solid_start=solid_curr,
+            solid_end=solid_curr + u_len,
+        ))
+        solid_curr += u_len
+        b_idx += 1
+
+    try:
+        f.seek(cur_pos)
+    except Exception:
+        pass
+
+    return blocks
 
 
 def test_archive(archive_path: str, password: Optional[str] = None) -> Dict:
@@ -729,6 +1034,9 @@ def test_archive(archive_path: str, password: Optional[str] = None) -> Dict:
     }
 
 
+test_archive.__test__ = False
+
+
 def _safe_write_all(fd: int, data: Any):
     """Zero-copy complete buffer write to file descriptor."""
     if not data:
@@ -849,11 +1157,15 @@ def decompress_archive(
     Blazing fast pipelined zero-copy NVMe extraction engine with parallel decompression and disk writes.
     """
     t0 = time.perf_counter()
-    archive_p = Path(archive_path).resolve()
-    if not archive_p.exists():
-        raise FileNotFoundError(f"Archive file not found: {archive_path}")
-
-    out_base = Path(output_dir).resolve() if output_dir else archive_p.parent
+    is_stdin = (archive_path == "-")
+    if is_stdin:
+        archive_p = None
+        out_base = Path(output_dir).resolve() if output_dir else Path.cwd()
+    else:
+        archive_p = Path(archive_path).resolve()
+        if not archive_p.exists():
+            raise FileNotFoundError(f"Archive file not found: {archive_path}")
+        out_base = Path(output_dir).resolve() if output_dir else (archive_p.parent if archive_p.is_file() else Path.cwd())
 
     old_umask = os.umask(0)
     stop_event = threading.Event()
@@ -865,26 +1177,128 @@ def decompress_archive(
     decomp_success = False
 
     try:
-        with open(archive_p, "rb") as f:
+        import contextlib
+        f_context = contextlib.nullcontext(sys.stdin.buffer) if is_stdin else open(archive_p, "rb")
+        with f_context as f:
             flags, block_size, manifest, enc_key, mac_key = read_archive_header(f, password=password)
+            f_start_pos = 0 if is_stdin else f.tell()
+
+            # Fast Selective Indexed Extraction if specific files/patterns were requested on a seekable file
+            if include_patterns and not is_stdin:
+                def _matches_pattern(rel_p: str) -> bool:
+                    norm = rel_p.replace("\\", "/").rstrip("/")
+                    bn = norm.split("/")[-1] if norm else ""
+                    for pat in include_patterns:
+                        pat_norm = pat.replace("\\", "/").rstrip("/")
+                        if norm == pat_norm or norm.startswith(pat_norm + "/"):
+                            return True
+                        if fnmatch.fnmatch(norm, pat_norm) or fnmatch.fnmatch(bn, pat_norm):
+                            return True
+                    return False
+
+                matched_files = [fe for fe in manifest.files if _matches_pattern(fe.rel_path)]
+                if matched_files:
+                    blocks_info = scan_block_index(f, f_start_pos)
+                    needed_blocks = set()
+                    for mf in matched_files:
+                        if mf.is_symlink or mf.is_dir or mf.size == 0:
+                            continue
+                        f_start = mf.solid_offset
+                        f_end = f_start + mf.size
+                        for b in blocks_info:
+                            if not (b.solid_end <= f_start or b.solid_start >= f_end):
+                                needed_blocks.add(b.block_id)
+
+                    # Add dedup refs recursively
+                    changed = True
+                    while changed:
+                        changed = False
+                        new_refs = set()
+                        for b_id in needed_blocks:
+                            b = blocks_info[b_id]
+                            if b.pipeline_id == PIPELINE_DEDUP_REF and b.ref_idx is not None:
+                                if b.ref_idx not in needed_blocks:
+                                    new_refs.add(b.ref_idx)
+                                    changed = True
+                        needed_blocks.update(new_refs)
+
+                    if len(needed_blocks) < len(blocks_info):
+                        # Selective decoding: ONLY decode the needed blocks!
+                        decoded_cache: Dict[int, bytes] = {}
+                        for b_id in sorted(needed_blocks):
+                            b = blocks_info[b_id]
+                            if b.pipeline_id == PIPELINE_DEDUP_REF:
+                                raw = decoded_cache[b.ref_idx]
+                            else:
+                                f.seek(b.payload_offset)
+                                payload = f.read(b.comp_len)
+                                if flags & FLAG_ENCRYPTED:
+                                    payload = decrypt_payload(payload, enc_key, mac_key)
+                                raw = decompress_chunk(payload, b.pipeline_id)
+                                if zlib.crc32(raw) != b.crc:
+                                    raise ValueError(f"CRC-32 checksum failed on block {b_id + 1}!")
+                            decoded_cache[b_id] = raw
+
+                        out_base.mkdir(parents=True, exist_ok=True)
+                        extracted_paths = []
+                        written_bytes = 0
+                        for mf in matched_files:
+                            norm_rel = mf.rel_path.replace("\\", "/").lstrip("/")
+                            if not manifest.is_dir and len(manifest.files) == 1 and (out_base.suffix or not out_base.exists() or out_base.is_file()):
+                                target_p = out_base
+                            else:
+                                target_p = out_base / norm_rel
+
+                            target_p.parent.mkdir(parents=True, exist_ok=True)
+                            if mf.is_symlink:
+                                _write_symlink_fast(str(target_p), mf.link_target, mf.mtime)
+                            elif mf.is_dir:
+                                target_p.mkdir(parents=True, exist_ok=True)
+                            else:
+                                f_start = mf.solid_offset
+                                f_end = f_start + mf.size
+                                slices = []
+                                for b in blocks_info:
+                                    if b.solid_end <= f_start or b.solid_start >= f_end:
+                                        continue
+                                    b_raw = decoded_cache[b.block_id]
+                                    slc_start = max(0, f_start - b.solid_start)
+                                    slc_end = min(len(b_raw), f_end - b.solid_start)
+                                    slices.append(b_raw[slc_start:slc_end])
+                                file_bytes = b"".join(slices)
+                                _write_single_file_fast(str(target_p), file_bytes, mf.mode, mf.mtime)
+                                written_bytes += len(file_bytes)
+                            extracted_paths.append(str(target_p))
+
+                        elapsed = time.perf_counter() - t0
+                        return {
+                            "status": "SUCCESS",
+                            "archive": str(archive_p) if not is_stdin else "<stdin>",
+                            "files_extracted": len(extracted_paths),
+                            "total_uncompressed_bytes": written_bytes,
+                            "blocks_decoded": len(decoded_cache),
+                            "total_blocks": len(blocks_info),
+                            "elapsed": elapsed,
+                            "selective": True,
+                        }
 
             # Fast 1st pass: scan block headers for referenced deduplication targets (<0.02s)
-            f_start_pos = f.tell()
             needed_refs = set()
             header_struct = struct.Struct("<BIII")
-            while True:
-                hdr_bytes = f.read(header_struct.size)
-                if not hdr_bytes:
-                    break
-                p_id, _, c_len, _ = header_struct.unpack(hdr_bytes)
-                if p_id == EOF_PIPELINE_ID:
-                    break
-                if p_id == PIPELINE_DEDUP_REF:
-                    ref_payload = f.read(c_len)
-                    needed_refs.add(struct.unpack("<I", ref_payload)[0])
-                else:
-                    f.seek(c_len, 1)
-            f.seek(f_start_pos)
+            if not is_stdin:
+                while True:
+                    hdr_bytes = f.read(header_struct.size)
+                    if not hdr_bytes:
+                        break
+                    p_id, _, c_len, _ = header_struct.unpack(hdr_bytes)
+                    if p_id == EOF_PIPELINE_ID:
+                        break
+                    if p_id == PIPELINE_DEDUP_REF:
+                        ref_payload = f.read(c_len)
+                        needed_refs.add(struct.unpack("<I", ref_payload)[0])
+                    else:
+                        f.seek(c_len, 1)
+                f.seek(f_start_pos)
 
             overall_hasher = hashlib.sha256()
             feeder_stats = {
@@ -947,7 +1361,7 @@ def decompress_archive(
                             else:
                                 raw_chunk = task_or_ref.result()
 
-                            if cur_block_idx in needed_refs:
+                            if is_stdin or cur_block_idx in needed_refs:
                                 dedup_cache[cur_block_idx] = raw_chunk
 
                             if len(raw_chunk) != uncomp_len:
@@ -1465,6 +1879,10 @@ def repair_archive(
     Detects damaged blocks, reconstructs them mathematically, and writes a healthy archive.
     """
     t0 = time.perf_counter()
+    from apex.foreign import is_foreign_archive
+    if is_foreign_archive(archive_path):
+        raise ValueError("Self-healing repair is only supported for Apex (.apx) archives.")
+
     archive_p = Path(archive_path).resolve()
     if not archive_p.exists():
         raise FileNotFoundError(f"Archive file not found: {archive_path}")

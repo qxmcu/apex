@@ -167,7 +167,7 @@ For the complete documentation suite, visit **[https://qxmcu.github.io/apex/](ht
 
 ## Products using Apex
 
-- **[ezaudioconverter.com](https://ezaudioconverter.com)**: Online high-speed audio conversion and media processing pipeline utilizing Apex's domain preconditioning filters for asset archiving.
+- **[ezconvertsuite.com](https://ezconvertsuite.com/)**: Online high-speed audio conversion and media processing pipeline utilizing Apex's domain preconditioning filters for asset archiving.
 
 ---
 

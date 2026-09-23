@@ -1,0 +1,28 @@
+{
+    "version": "1.3.0",
+    "description": "Adaptive Tournament Multi-Engine Compression Tool & Next-Gen Container",
+    "homepage": "https://qxmcu.github.io/apex/",
+    "license": "Apache-2.0",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-windows-x86_64.zip",
+            "hash": "auto"
+        },
+        "arm64": {
+            "url": "https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-windows-arm64.zip",
+            "hash": "auto"
+        }
+    },
+    "bin": "apex.exe",
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/qxmcu/apex/releases/download/v$version/apex-v$version-windows-x86_64.zip"
+            },
+            "arm64": {
+                "url": "https://github.com/qxmcu/apex/releases/download/v$version/apex-v$version-windows-arm64.zip"
+            }
+        }
+    }
+}

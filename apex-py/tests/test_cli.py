@@ -194,7 +194,7 @@ class TestCLI(unittest.TestCase):
             encoding="utf-8",
         )
         self.assertEqual(res.returncode, 0)
-        self.assertIn("1.2.0", res.stdout)
+        self.assertIn("1.3.0", res.stdout)
 
     def test_cli_selective_extraction(self):
         sample_dir = Path(self.tmpdir) / "cli_sel_src"

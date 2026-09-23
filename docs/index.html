@@ -119,7 +119,7 @@
       <div class="flex items-center gap-4">
         <div class="hidden sm:flex items-center gap-2 font-mono text-[11px] px-2.5 py-1 rounded bg-brand-panel border border-brand-border text-brand-muted">
           <span class="w-1.5 h-1.5 rounded-full bg-brand-acid animate-pulse"></span>
-          <span>v1.2.0-STABLE</span>
+          <span>v1.3.0-STABLE</span>
         </div>
         <a href="https://github.com/qxmcu/apex" target="_blank" rel="noopener noreferrer"
            class="inline-flex items-center gap-2 px-4 py-2 text-xs font-mono font-semibold uppercase tracking-wider bg-[#EDEDEC] text-black hover:bg-brand-acid transition-colors">
@@ -697,7 +697,7 @@ reg import windows_context.reg</pre>
           <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">Complete CLI Manual</h2>
         </div>
         <p class="text-sm text-brand-muted max-w-md font-mono">
-          Nine high-performance subcommands engineered for terminal productivity, build scripting, and air-gapped operations.
+          Ten high-performance subcommands engineered for terminal productivity, build scripting, and air-gapped operations.
         </p>
       </div>
 
@@ -918,6 +918,40 @@ apex completions fish &gt; ~/.config/fish/completions/apex.fish</pre>
 
         </div>
 
+        <!-- Command 10 & Advanced Interop: mount & tar syntax -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          <!-- mount -->
+          <div class="border border-brand-border bg-brand-panel p-6 sm:p-8 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-brand-border">
+              <h3 class="text-base font-bold text-white uppercase">apex mount</h3>
+              <span class="text-brand-acid text-[11px]">FUSE Virtual Filesystem</span>
+            </div>
+            <p class="text-brand-muted text-[11px] leading-relaxed">
+              Mounts an archive read-only as a virtual filesystem via FUSE. Transparent on-demand block decompression with an integrated 64 MB LRU block cache ensures minimal memory consumption and instant random reads.
+            </p>
+            <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">apex mount archive.apx /mnt/archive
+apex mount encrypted.apx /mnt -p "key" --cache-size 128</pre>
+          </div>
+
+          <!-- tar flags & pipes -->
+          <div class="border border-brand-border bg-brand-panel p-6 sm:p-8 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-brand-border">
+              <h3 class="text-base font-bold text-white uppercase">Tar Compatibility &amp; Unix Pipes</h3>
+              <span class="text-brand-acid text-[11px]">POSIX Workflows</span>
+            </div>
+            <p class="text-brand-muted text-[11px] leading-relaxed">
+              Standard tar flag clusters and streaming Unix pipelines. Stream to stdout without seeking, extract from stdin, ingest null-delimited file lists, or create incremental standalone archives with chunk reuse.
+            </p>
+            <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">apex -cvf out.apx src/
+apex -cf - src/ | ssh host "apex -xf -"
+find . -name "*.rs" -print0 | apex -c0f rust.apx
+apex compress src -o day2.apx --base day1.apx
+apex x foreign.tar.gz -d out/</pre>
+          </div>
+
+        </div>
+
       </div>
 
     </div>
@@ -1038,7 +1072,7 @@ assert orig_bytes == b"Raw uncompressed telemetry stream..."</pre>
           <h2 class="text-3xl sm:text-5xl font-bold tracking-tight text-white mt-2 uppercase">Container Specification</h2>
         </div>
         <p class="text-sm text-brand-muted max-w-md font-mono">
-          Specification v1.2.0: Linear streaming layout, inline CRC-32 validation, and cryptographic payload envelopes.
+          Specification v1.3.0: Linear streaming layout, inline CRC-32 validation, and cryptographic payload envelopes.
         </p>
       </div>
 
@@ -1146,11 +1180,11 @@ assert orig_bytes == b"Raw uncompressed telemetry stream..."</pre>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 font-mono text-xs">
         
-        <!-- Product Card 1: ezaudioconverter.com -->
+        <!-- Product Card 1: ezconvertsuite.com -->
         <div class="border border-brand-border bg-[#090A0F] p-8 flex flex-col justify-between space-y-6 group hover:border-brand-acid transition-colors">
           <div>
             <div class="flex items-center justify-between pb-4 border-b border-brand-border">
-              <span class="text-white font-bold text-base uppercase tracking-wider">EZAudioConverter</span>
+              <span class="text-white font-bold text-base uppercase tracking-wider">EZ Convert Suite</span>
               <span class="px-2 py-0.5 bg-brand-acid/20 text-brand-acid border border-brand-acid/40 text-[10px] uppercase font-bold">Production</span>
             </div>
             <p class="mt-4 text-brand-muted leading-relaxed text-[11px]">
@@ -1159,7 +1193,7 @@ assert orig_bytes == b"Raw uncompressed telemetry stream..."</pre>
           </div>
           <div class="pt-4 border-t border-hairline flex items-center justify-between">
             <span class="text-[11px] text-brand-muted">Domain Filtering • Zero Bloat</span>
-            <a href="https://ezaudioconverter.com" target="_blank" rel="noopener noreferrer" 
+            <a href="https://ezconvertsuite.com/" target="_blank" rel="noopener noreferrer" 
                class="text-brand-acid hover:text-white uppercase font-bold flex items-center gap-1.5 transition-colors">
               <span>Visit Site</span>
               <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
@@ -1335,17 +1369,17 @@ assert orig_bytes == b"Raw uncompressed telemetry stream..."</pre>
           <div>
             <div class="flex justify-between items-center text-xs text-brand-muted mb-4">
               <span class="text-white font-bold uppercase">macOS (Darwin)</span>
-              <span>14 MB &bull; v1.2.0</span>
+              <span>14 MB &bull; v1.3.0</span>
             </div>
             <p class="text-xs text-brand-muted leading-normal mb-6">
               Verified on macOS 12+ (x86_64 and Apple Silicon via Rosetta/Native).
             </p>
             <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">
-curl -LO https://github.com/qxmcu/apex/releases/download/v1.2.0/apex-v1.2.0-darwin-x86_64.tar.gz
-tar -xzf apex-v1.2.0-darwin-x86_64.tar.gz
+curl -LO https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-darwin-x86_64.tar.gz
+tar -xzf apex-v1.3.0-darwin-x86_64.tar.gz
 chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           </div>
-          <a href="https://github.com/qxmcu/apex/releases/download/v1.2.0/apex-v1.2.0-darwin-x86_64.tar.gz" 
+          <a href="https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-darwin-x86_64.tar.gz" 
              class="mt-8 block text-center py-2.5 px-4 bg-brand-acid hover:bg-white text-black font-bold text-xs uppercase tracking-wider transition-colors">
             Download macOS Binary
           </a>
@@ -1356,17 +1390,17 @@ chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           <div>
             <div class="flex justify-between items-center text-xs text-brand-muted mb-4">
               <span class="text-white font-bold uppercase">Linux (CLI)</span>
-              <span>GLIBC 2.28+ &bull; v1.2.0</span>
+              <span>GLIBC 2.28+ &bull; v1.3.0</span>
             </div>
             <p class="text-xs text-brand-muted leading-normal mb-6">
               Ubuntu, Debian, Fedora, Arch, Alpine. Standalone zero-dependency native ELF executable.
             </p>
             <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">
-curl -LO https://github.com/qxmcu/apex/releases/download/v1.2.0/apex-v1.2.0-linux-x86_64.tar.gz
-tar -xzf apex-v1.2.0-linux-x86_64.tar.gz
+curl -LO https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-linux-x86_64.tar.gz
+tar -xzf apex-v1.3.0-linux-x86_64.tar.gz
 chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           </div>
-          <a href="https://github.com/qxmcu/apex/releases/download/v1.2.0/apex-v1.2.0-linux-x86_64.tar.gz" 
+          <a href="https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-linux-x86_64.tar.gz" 
              class="mt-8 block text-center py-2.5 px-4 bg-brand-acid hover:bg-white text-black font-bold text-xs uppercase tracking-wider transition-colors">
             Download Linux Binary
           </a>
@@ -1377,17 +1411,17 @@ chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           <div>
             <div class="flex justify-between items-center text-xs text-brand-muted mb-4">
               <span class="text-white font-bold uppercase">Windows 10 / 11</span>
-              <span>v1.2.0-STABLE</span>
+              <span>v1.3.0-STABLE</span>
             </div>
             <p class="text-xs text-brand-muted leading-normal mb-6">
               Includes Explorer right-click context menu integration script, UTF-8 console output, and O_BINARY safety.
             </p>
             <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">
-curl -LO https://github.com/qxmcu/apex/releases/download/v1.2.0/apex-v1.2.0-windows-x86_64.zip
-tar -xf apex-v1.2.0-windows-x86_64.zip
+curl -LO https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-windows-x86_64.zip
+tar -xf apex-v1.3.0-windows-x86_64.zip
 .\apex.exe --help</pre>
           </div>
-          <a href="https://github.com/qxmcu/apex/releases/download/v1.2.0/apex-v1.2.0-windows-x86_64.zip" 
+          <a href="https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-windows-x86_64.zip" 
              class="mt-8 block text-center py-2.5 px-4 bg-brand-acid hover:bg-white text-black font-bold text-xs uppercase tracking-wider transition-colors">
             Download Windows Binary
           </a>
@@ -1456,7 +1490,7 @@ tar -xf apex-v1.2.0-windows-x86_64.zip
             </div>
             <div class="flex justify-between">
               <span>Latest release:</span>
-              <a href="https://github.com/qxmcu/apex/releases" target="_blank" class="text-white hover:text-brand-acid transition-colors">v1.2.0</a>
+              <a href="https://github.com/qxmcu/apex/releases" target="_blank" class="text-white hover:text-brand-acid transition-colors">v1.3.0</a>
             </div>
             <div class="flex justify-between">
               <span>License:</span>

@@ -612,17 +612,17 @@
         <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
           <div>
             <div class="flex items-center justify-between text-brand-acid mb-3">
-              <span class="font-bold uppercase tracking-wider">Selective Extraction</span>
+              <span class="font-bold uppercase tracking-wider">Indexed Extraction</span>
               <i data-lucide="filter" class="w-4 h-4"></i>
             </div>
             <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
-              Extract specific files or glob patterns directly without decompressing skipped files to disk or allocating redundant memory buffers.
+              Granular block mapping (block_id, offset, length) enables instant selective decoding of target files without decompressing skipped archive blocks.
             </p>
-            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">apex x archive.apx -i "*.json"
+            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">apex x archive.apx -e "*.json"
 apex x vault.apx path/to/file</pre>
           </div>
           <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
-            Zero-copy memoryview skipping • SHA-256 verified
+            Sub-millisecond block index &bull; Zero-copy skips
           </div>
         </div>
 
@@ -640,7 +640,7 @@ apex x vault.apx path/to/file</pre>
 apex diff a.apx b.apx --json</pre>
           </div>
           <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
-            Header-only traversal • Machine-readable JSON
+            Header-only traversal &bull; Machine-readable JSON
           </div>
         </div>
 
@@ -655,11 +655,11 @@ apex diff a.apx b.apx --json</pre>
               Direct Python SDK bindings for pipelines, automated systems, and in-memory byte buffer tournaments without spawning subprocesses.
             </p>
             <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">import apex
-apex.compress("data", "out.apx")
-apex.compress_bytes(payload)</pre>
+apex.compress_file("data", "out.apx")
+apex.compress_buffer(payload)</pre>
           </div>
           <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
-            Fully typed • In-memory byte streaming
+            Fully typed &bull; In-memory byte streaming
           </div>
         </div>
 
@@ -667,7 +667,7 @@ apex.compress_bytes(payload)</pre>
         <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
           <div>
             <div class="flex items-center justify-between text-brand-acid mb-3">
-              <span class="font-bold uppercase tracking-wider">Shell & OS Integration</span>
+              <span class="font-bold uppercase tracking-wider">Shell &amp; OS Integration</span>
               <i data-lucide="terminal" class="w-4 h-4"></i>
             </div>
             <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
@@ -677,7 +677,80 @@ apex.compress_bytes(payload)</pre>
 reg import windows_context.reg</pre>
           </div>
           <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
-            Windows context menu • macOS Finder • Shell scripts
+            Windows context menu &bull; macOS Finder &bull; Shell scripts
+          </div>
+        </div>
+
+        <!-- Feature 5: Tar Syntax & Unix Streams -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-3">
+              <span class="font-bold uppercase tracking-wider">Tar Flags &amp; Unix Pipes</span>
+              <i data-lucide="layers" class="w-4 h-4"></i>
+            </div>
+            <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
+              Familiar clustered tar syntax with true non-seekable streaming over stdout/stdin and null-delimited file list ingestion.
+            </p>
+            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">apex -cvf out.apx src/
+apex -cf - src/ | ssh host "apex -xf -"
+find . -name "*.log" -print0 | apex -c0f logs.apx</pre>
+          </div>
+          <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
+            Non-seekable stdout &bull; find -print0 support
+          </div>
+        </div>
+
+        <!-- Feature 6: Transparent Foreign Engine -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-3">
+              <span class="font-bold uppercase tracking-wider">Foreign Formats</span>
+              <i data-lucide="archive" class="w-4 h-4"></i>
+            </div>
+            <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
+              Transparent magic-byte detection for legacy ZIP and TAR.GZ/TAR archives. List and extract foreign archives using standard Apex commands.
+            </p>
+            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">apex list archive.zip
+apex extract bundle.tar.gz -d out/</pre>
+          </div>
+          <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
+            Magic signature sniffing &bull; Native ZIP/TAR reader
+          </div>
+        </div>
+
+        <!-- Feature 7: Standalone Incremental Compression -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-3">
+              <span class="font-bold uppercase tracking-wider">Incremental Dedup</span>
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </div>
+            <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
+              Indexes chunks by 256-bit BLAKE2b hash and reuses matching compressed blocks directly from a base archive. Outputs fully standalone containers.
+            </p>
+            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">apex compress src/ -o day2.apx --base day1.apx
+apex info day2.apx</pre>
+          </div>
+          <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
+            Zero-copy block reuse &bull; Standalone extraction
+          </div>
+        </div>
+
+        <!-- Feature 8: Read-Only FUSE Virtual Filesystem -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-3">
+              <span class="font-bold uppercase tracking-wider">FUSE Virtual Mount</span>
+              <i data-lucide="hard-drive" class="w-4 h-4"></i>
+            </div>
+            <p class="text-brand-muted leading-relaxed text-[11px] mb-4">
+              Mounts .apx containers read-only as standard POSIX directories with on-demand decompression and an integrated 64 MB LRU block cache.
+            </p>
+            <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid overflow-x-auto custom-scrollbar">apex mount archive.apx /mnt/point
+apex mount secure.apx /mnt -p "key"</pre>
+          </div>
+          <div class="text-[10px] text-brand-muted border-t border-hairline pt-3">
+            64 MB LRU block cache &bull; Zero extraction footprint
           </div>
         </div>
 
@@ -1149,15 +1222,33 @@ assert orig_bytes == b"Raw uncompressed telemetry stream..."</pre>
 
       </div>
 
+      <!-- Manifest Member Block Indexing Schema -->
+      <div class="mt-8 border border-brand-border bg-brand-panel p-6 sm:p-8 font-mono text-xs">
+        <span class="text-white font-bold uppercase block pb-3 border-b border-brand-border mb-4">Manifest Member Block Index Layout (Per File)</span>
+        <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar mb-4">+----------------------+-----------------------+-----------------------+-------------------------+
+| block_id (uint32)    | offset (uint32)       | length (uint32)       | solid_offset (uint64)   |
++----------------------+-----------------------+-----------------------+-------------------------+</pre>
+        <p class="text-[11px] text-brand-muted leading-relaxed">
+          Granular container mapping allows targeted single-file extraction (<code class="text-brand-acid">apex x archive.apx path/to/file -d out</code>) to calculate exact block offsets and selectively decompress only blocks containing target byte spans, skipping all unreferenced blocks without disk I/O.
+        </p>
+      </div>
+
       <!-- Authenticated Encryption Envelope Spec -->
       <div class="mt-8 border border-brand-border bg-brand-panel p-6 sm:p-8 font-mono text-xs">
-        <span class="text-white font-bold uppercase block pb-3 border-b border-brand-border mb-4">Authenticated Encryption Envelope</span>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-brand-border mb-4 gap-2">
+          <span class="text-white font-bold uppercase">Authenticated Encryption Envelope</span>
+          <span class="text-brand-acid text-[11px]">RFC 5869 HKDF-Expand Subkey Independence</span>
+        </div>
         <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar mb-4">+-------------------+----------------------+------------------------+----------------------+
 | Cipher ID (1 byte)| Nonce / IV (12/16 B) | Ciphertext (N bytes)   | HMAC-SHA256 (32 B)   |
 +-------------------+----------------------+------------------------+----------------------+</pre>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] text-brand-muted">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px] text-brand-muted mb-4">
           <div><span class="text-white font-bold">0x01 CIPHER_CHACHA20_HMAC_SHA256:</span> Pure in-process Python implementation. Zero external C/OpenSSL toolchain dependencies. Immune to ABI breakage.</div>
           <div><span class="text-white font-bold">0x02 CIPHER_AES256_CTR_HMAC:</span> Hardware-accelerated AES-NI CTR mode with HMAC-SHA256 Encrypt-then-MAC authentication.</div>
+        </div>
+        <div class="p-3 bg-black border border-brand-border text-[10px] text-brand-muted">
+          <span class="text-brand-acid font-bold block mb-1">Cryptographic Key Independence:</span>
+          Master key derived via PBKDF2-HMAC-SHA256 (100,000 rounds) is expanded via RFC 5869 HKDF-Expand with domain-separated info labels (<code class="text-white">b"apex-encryption-key-v1"</code> and <code class="text-white">b"apex-authentication-key-v1"</code>) to guarantee complete cryptographic separation between encryption and HMAC authentication.
         </div>
       </div>
 
@@ -1346,33 +1437,83 @@ assert orig_bytes == b"Raw uncompressed telemetry stream..."</pre>
         </p>
       </div>
 
-      <!-- Homebrew Tap Card -->
-      <div class="mb-10 border border-brand-acid/40 bg-brand-panel p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 font-mono">
-        <div>
-          <div class="flex items-center gap-3 mb-2">
-            <span class="px-2 py-0.5 text-[10px] bg-brand-acid/20 text-brand-acid border border-brand-acid/40 font-bold uppercase tracking-wider">Recommended (macOS &amp; Linux)</span>
-            <span class="text-white font-bold text-base uppercase tracking-wider">Homebrew Tap</span>
+      <!-- Package Managers & Ecosystem Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 font-mono text-xs mb-10">
+        
+        <!-- Homebrew Tap -->
+        <div class="border border-brand-acid/40 bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-2">
+              <span class="px-1.5 py-0.5 text-[9px] bg-brand-acid/20 text-brand-acid border border-brand-acid/40 font-bold uppercase tracking-wider">macOS &amp; Linux</span>
+              <i data-lucide="terminal" class="w-4 h-4"></i>
+            </div>
+            <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-2">Homebrew Tap</h4>
+            <p class="text-xs text-brand-muted leading-relaxed mb-4">
+              Official Homebrew tap with shell completions (Bash, Zsh, Fish) and automatic updates.
+            </p>
           </div>
-          <p class="text-xs text-brand-muted max-w-xl leading-relaxed">
-            Install Apex with automatic shell completions (Bash, Zsh, Fish) and cryptographic SHA-256 validation via the official Homebrew tap.
-          </p>
+          <pre class="p-2.5 bg-black border border-brand-border text-[11px] text-brand-acid select-all custom-scrollbar">brew install qxmcu/tap/apex</pre>
         </div>
-        <div class="w-full md:w-auto shrink-0">
-          <pre class="p-3.5 bg-black border border-brand-border text-xs text-brand-acid select-all custom-scrollbar">brew install qxmcu/tap/apex</pre>
+
+        <!-- WinGet -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-2">
+              <span class="px-1.5 py-0.5 text-[9px] bg-brand-acid/20 text-brand-acid border border-brand-acid/40 font-bold uppercase tracking-wider">Windows 10/11</span>
+              <i data-lucide="package" class="w-4 h-4"></i>
+            </div>
+            <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-2">WinGet Manifest</h4>
+            <p class="text-xs text-brand-muted leading-relaxed mb-4">
+              Native Windows Package Manager distribution with portable alias registration.
+            </p>
+          </div>
+          <pre class="p-2.5 bg-black border border-brand-border text-[11px] text-brand-acid select-all custom-scrollbar">winget install qxmcu.apex</pre>
         </div>
+
+        <!-- Scoop -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-2">
+              <span class="px-1.5 py-0.5 text-[9px] bg-brand-acid/20 text-brand-acid border border-brand-acid/40 font-bold uppercase tracking-wider">Windows CLI</span>
+              <i data-lucide="download" class="w-4 h-4"></i>
+            </div>
+            <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-2">Scoop Installer</h4>
+            <p class="text-xs text-brand-muted leading-relaxed mb-4">
+              Direct manifest install with automated GitHub release tracking and hash validation.
+            </p>
+          </div>
+          <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid select-all custom-scrollbar">scoop install https://raw.githubusercontent.com/qxmcu/apex/main/packaging/scoop/apex.json</pre>
+        </div>
+
+        <!-- GitHub Action -->
+        <div class="border border-brand-border bg-brand-panel p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-brand-acid mb-2">
+              <span class="px-1.5 py-0.5 text-[9px] bg-brand-acid/20 text-brand-acid border border-brand-acid/40 font-bold uppercase tracking-wider">CI / CD</span>
+              <i data-lucide="workflow" class="w-4 h-4"></i>
+            </div>
+            <h4 class="text-white font-bold text-sm uppercase tracking-wider mb-2">GitHub Action</h4>
+            <p class="text-xs text-brand-muted leading-relaxed mb-4">
+              Reusable composite action for fast pipeline artifact packaging.
+            </p>
+          </div>
+          <pre class="p-2.5 bg-black border border-brand-border text-[10px] text-brand-acid select-all custom-scrollbar">uses: qxmcu/apex/.github/actions/apex-pack@v1.3.0</pre>
+        </div>
+
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Native Standalone Binaries Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
         
         <!-- macOS -->
         <div class="border border-brand-border bg-brand-panel p-6 sm:p-8 flex flex-col justify-between font-mono">
           <div>
             <div class="flex justify-between items-center text-xs text-brand-muted mb-4">
               <span class="text-white font-bold uppercase">macOS (Darwin)</span>
-              <span>14 MB &bull; v1.3.0</span>
+              <span>14.5 MB &bull; v1.3.0</span>
             </div>
             <p class="text-xs text-brand-muted leading-normal mb-6">
-              Verified on macOS 12+ (x86_64 and Apple Silicon via Rosetta/Native).
+              Verified on macOS 12+ (x86_64 and Apple Silicon via Rosetta/Native). Zero runtime dependencies.
             </p>
             <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">
 curl -LO https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-darwin-x86_64.tar.gz
@@ -1390,10 +1531,10 @@ chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           <div>
             <div class="flex justify-between items-center text-xs text-brand-muted mb-4">
               <span class="text-white font-bold uppercase">Linux (CLI)</span>
-              <span>GLIBC 2.28+ &bull; v1.3.0</span>
+              <span>31.1 MB &bull; v1.3.0</span>
             </div>
             <p class="text-xs text-brand-muted leading-normal mb-6">
-              Ubuntu, Debian, Fedora, Arch, Alpine. Standalone zero-dependency native ELF executable.
+              Ubuntu, Debian, Fedora, Arch, Alpine (GLIBC 2.28+). Standalone zero-dependency native ELF binary.
             </p>
             <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">
 curl -LO https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-linux-x86_64.tar.gz
@@ -1411,10 +1552,10 @@ chmod +x apex && sudo mv apex /usr/local/bin/</pre>
           <div>
             <div class="flex justify-between items-center text-xs text-brand-muted mb-4">
               <span class="text-white font-bold uppercase">Windows 10 / 11</span>
-              <span>v1.3.0-STABLE</span>
+              <span>15.1 MB &bull; v1.3.0</span>
             </div>
             <p class="text-xs text-brand-muted leading-normal mb-6">
-              Includes Explorer right-click context menu integration script, UTF-8 console output, and O_BINARY safety.
+              Includes Explorer right-click context menu registry script, UTF-8 console output, and O_BINARY safety.
             </p>
             <pre class="p-3 bg-black border border-brand-border text-[11px] text-brand-acid overflow-x-auto custom-scrollbar">
 curl -LO https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-windows-x86_64.zip
@@ -1427,6 +1568,49 @@ tar -xf apex-v1.3.0-windows-x86_64.zip
           </a>
         </div>
 
+      </div>
+
+      <!-- Binary Checksums & Cryptographic Verification Table -->
+      <div class="border border-brand-border bg-brand-panel p-6 sm:p-8 font-mono text-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-brand-border gap-2 mb-6">
+          <div>
+            <span class="text-[11px] uppercase tracking-wider text-brand-acid font-bold block mb-1">Cryptographic Integrity</span>
+            <h4 class="text-base font-bold text-white uppercase">Official SHA-256 Release Checksums</h4>
+          </div>
+          <span class="text-brand-muted text-[11px]">Verify via: <code class="text-white">shasum -a 256 &lt;archive&gt;</code></span>
+        </div>
+        <div class="border border-brand-border overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left border-collapse text-[11px]">
+            <thead>
+              <tr class="bg-black text-brand-muted uppercase border-b border-brand-border">
+                <th class="p-3 border-r border-brand-border">Platform</th>
+                <th class="p-3 border-r border-brand-border">Archive Asset</th>
+                <th class="p-3 border-r border-brand-border">Size</th>
+                <th class="p-3">SHA-256 Digest</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-brand-border text-gray-300">
+              <tr>
+                <td class="p-3 font-bold text-white border-r border-brand-border">macOS</td>
+                <td class="p-3 text-brand-acid border-r border-brand-border">apex-v1.3.0-darwin-x86_64.tar.gz</td>
+                <td class="p-3 border-r border-brand-border">14.53 MB</td>
+                <td class="p-3 font-mono text-[10px] text-gray-400 select-all">5c930feae2633f4acaa326423ff2c120fd3c73aa53b6599836661e68b3f4b89b</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-bold text-white border-r border-brand-border">Linux</td>
+                <td class="p-3 text-brand-acid border-r border-brand-border">apex-v1.3.0-linux-x86_64.tar.gz</td>
+                <td class="p-3 border-r border-brand-border">31.13 MB</td>
+                <td class="p-3 font-mono text-[10px] text-gray-400 select-all">360f76a52a27299b7083f35bdf4f78a0a406cd43606dd0d9b142a2417e904ffb</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-bold text-white border-r border-brand-border">Windows</td>
+                <td class="p-3 text-brand-acid border-r border-brand-border">apex-v1.3.0-windows-x86_64.zip</td>
+                <td class="p-3 border-r border-brand-border">15.13 MB</td>
+                <td class="p-3 font-mono text-[10px] text-gray-400 select-all">46b63ba7ca108bab13c7e1c025d1313190ff08fbde873c5808c62684f31e12a8</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </div>

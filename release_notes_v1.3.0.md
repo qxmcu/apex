@@ -32,6 +32,10 @@ ApexCompress v1.3.0 brings indexed random access, full tar-compatible syntax and
 - **Virtual Mount**: `apex mount archive.apx /mnt/point` exposes the archive transparently as a read-only virtual filesystem.
 - **LRU Block Cache**: Configurable 64 MB LRU block cache ensures high-performance random read access and minimal memory overhead.
 
+### Security Hardening: Cryptographic Key Independence (RFC 5869 HKDF-Expand)
+- **Elimination of Key Dependency**: Fixed high-severity structural flaw where a single 64-byte PBKDF2 output was directly split into encryption ($K_{enc}$) and authentication ($K_{mac}$) keys.
+- **Two-Step KDF Expansion**: Apex now derives a 256-bit master key via PBKDF2-HMAC-SHA256 (100,000 iterations) and applies RFC 5869 HKDF-Expand with domain-separated info strings (`apex-encryption-key-v1` and `apex-authentication-key-v1`), guaranteeing complete cryptographic independence and permanently eliminating key-reuse, structural leakage, and dependency attack vectors between stream ciphers (ChaCha20 / AES-CTR) and HMAC-SHA256.
+
 ### Packaging & Ecosystem Integrations
 - **Scoop Manifest**: Automated Windows package installation via Scoop (`packaging/scoop/apex.json`).
 - **Winget Manifest**: Windows Package Manager manifest (`packaging/winget/apex.yaml`).

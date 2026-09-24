@@ -41,10 +41,13 @@ class TestSecurity(unittest.TestCase):
         self.assertEqual(m1, m2)
         self.assertEqual(len(k1), 32)
         self.assertEqual(len(m1), 32)
+        # K_enc and K_mac must be cryptographically independent subkeys
+        self.assertNotEqual(k1, m1)
 
         # Different salt gives different keys
         k3, m3 = derive_keys("mypassword", os.urandom(16))
         self.assertNotEqual(k1, k3)
+        self.assertNotEqual(m1, m3)
 
     def test_payload_encryption_roundtrip(self):
         salt = os.urandom(16)

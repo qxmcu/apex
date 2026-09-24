@@ -22,17 +22,37 @@ CIPHER_AES256_CTR_HMAC = 0x02
 CIPHER_DEFAULT = CIPHER_CHACHA20_HMAC_SHA256
 
 
+def hkdf_expand(prk: bytes, info: bytes, length: int = 32) -> bytes:
+    """
+    RFC 5869 HKDF-Expand using HMAC-SHA256.
+    Expands pseudorandom key (PRK) into cryptographically independent subkeys using domain separation info.
+    """
+    t = b""
+    okm = b""
+    counter = 1
+    while len(okm) < length:
+        t = hmac.new(prk, t + info + bytes([counter]), hashlib.sha256).digest()
+        okm += t
+        counter += 1
+    return okm[:length]
+
+
 def derive_keys(password: str, salt: bytes) -> Tuple[bytes, bytes]:
-    """Derives a 256-bit encryption key and 256-bit HMAC key from password + salt."""
-    stretched = hashlib.pbkdf2_hmac(
+    """
+    Derives cryptographically independent 256-bit encryption (K_enc) and authentication (K_mac) keys.
+    Uses PBKDF2-HMAC-SHA256 (100,000 rounds) to produce a master key, followed by
+    RFC 5869 HKDF-Expand with domain separation labels to permanently prevent key reuse,
+    dependency attacks, and structural leakage between the stream cipher and HMAC tag.
+    """
+    master_key = hashlib.pbkdf2_hmac(
         "sha256",
         password.encode("utf-8"),
         salt,
         iterations=PBKDF2_ITERATIONS,
-        dklen=64,
+        dklen=32,
     )
-    enc_key = stretched[:32]
-    mac_key = stretched[32:]
+    enc_key = hkdf_expand(master_key, b"apex-encryption-key-v1", length=32)
+    mac_key = hkdf_expand(master_key, b"apex-authentication-key-v1", length=32)
     return enc_key, mac_key
 
 

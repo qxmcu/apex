@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release tag (e.g. v1.2.0)'
+        description: 'Release tag (e.g. v1.3.0)'
         required: false
-        default: 'v1.2.0'
+        default: 'v1.3.0'
 
 permissions:
   contents: write
@@ -47,7 +47,7 @@ jobs:
       - name: Package Windows Binary and Generate Checksum
         shell: bash
         run: |
-          VERSION="${{ github.event.inputs.version || 'v1.1.0' }}"
+          VERSION="${{ github.event.inputs.version || 'v1.3.0' }}"
           echo "Packaging for version ${VERSION}..."
           mkdir -p release-pkg
           cp apex-py/dist/apex.exe release-pkg/apex.exe
@@ -72,5 +72,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="${{ github.event.inputs.version || 'v1.1.0' }}"
+          VERSION="${{ github.event.inputs.version || 'v1.3.0' }}"
           gh release upload "${VERSION}" apex-${VERSION}-windows-x86_64.zip apex-${VERSION}-windows-x86_64.zip.sha256 --clobber

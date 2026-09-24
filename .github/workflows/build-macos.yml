@@ -1,4 +1,4 @@
-name: Build Linux Standalone Executable
+name: Build macOS Standalone Executable
 
 on:
   workflow_dispatch:
@@ -12,9 +12,9 @@ permissions:
   contents: write
 
 jobs:
-  build-linux:
-    name: Build & Package Linux x86_64 Executable
-    runs-on: ubuntu-latest
+  build-macos:
+    name: Build & Package macOS Executable
+    runs-on: macos-13
 
     steps:
       - name: Check out repository
@@ -26,11 +26,6 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install system build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y patchelf ccache build-essential
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -41,38 +36,38 @@ jobs:
         run: |
           python apex-py/build_standalone.py
 
-      - name: Smoke test compiled Linux binary
+      - name: Smoke test compiled macOS binary
         run: |
           chmod +x ./apex-py/dist/apex
           ./apex-py/dist/apex --version
           ./apex-py/dist/apex --help
           ./apex-py/dist/apex info pyproject.toml
 
-      - name: Package Linux Binary and Generate Checksum
+      - name: Package macOS Binary and Generate Checksum
         run: |
           VERSION="${{ github.event.inputs.version || 'v1.3.0' }}"
           echo "Building package for version ${VERSION}..."
           mkdir -p release-pkg
           cp apex-py/dist/apex release-pkg/apex
           cd release-pkg
-          tar -czvf "../apex-${VERSION}-linux-x86_64.tar.gz" apex
+          tar -czvf "../apex-${VERSION}-darwin-x86_64.tar.gz" apex
           cd ..
-          sha256sum "apex-${VERSION}-linux-x86_64.tar.gz" > "apex-${VERSION}-linux-x86_64.tar.gz.sha256"
+          shasum -a 256 "apex-${VERSION}-darwin-x86_64.tar.gz" > "apex-${VERSION}-darwin-x86_64.tar.gz.sha256"
           echo "Package created successfully:"
-          ls -la apex-*-linux*
-          cat "apex-${VERSION}-linux-x86_64.tar.gz.sha256"
+          ls -la apex-*-darwin*
+          cat "apex-${VERSION}-darwin-x86_64.tar.gz.sha256"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: apex-linux-x86_64
+          name: apex-darwin-x86_64
           path: |
-            apex-*-linux-x86_64.tar.gz
-            apex-*-linux-x86_64.tar.gz.sha256
+            apex-*-darwin-x86_64.tar.gz
+            apex-*-darwin-x86_64.tar.gz.sha256
 
       - name: Upload to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ github.event.inputs.version || 'v1.3.0' }}"
-          gh release upload "${VERSION}" apex-${VERSION}-linux-x86_64.tar.gz apex-${VERSION}-linux-x86_64.tar.gz.sha256 --clobber
+          gh release upload "${VERSION}" apex-${VERSION}-darwin-x86_64.tar.gz apex-${VERSION}-darwin-x86_64.tar.gz.sha256 --clobber

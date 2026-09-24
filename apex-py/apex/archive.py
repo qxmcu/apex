@@ -617,11 +617,9 @@ def compress_archive(
     write_success = False
 
     try:
-        out_context = open(temp_archive_path, "wb", buffering=4 * 1024 * 1024) if not is_stdout else sys.stdout.buffer
-        # If is_stdout, out_context is not a newly opened context manager
+        import contextlib
         def get_out_handle():
             if is_stdout:
-                import contextlib
                 return contextlib.nullcontext(sys.stdout.buffer)
             return open(temp_archive_path, "wb", buffering=4 * 1024 * 1024)
 

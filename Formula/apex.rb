@@ -9,13 +9,13 @@ class Apex < Formula
 
   on_macos do
     url "https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-darwin-x86_64.tar.gz"
-    sha256 "ca1702fbffe565b392b22edced008b372877f7c084a7100e74cec376f534db50"
+    sha256 "5c930feae2633f4acaa326423ff2c120fd3c73aa53b6599836661e68b3f4b89b"
   end
 
   on_linux do
     if Hardware::CPU.intel?
       url "https://github.com/qxmcu/apex/releases/download/v1.3.0/apex-v1.3.0-linux-x86_64.tar.gz"
-      sha256 "511b576888a11e4c0aa500d22342543a027b6a7982b1038c463f24a685f47583"
+      sha256 "360f76a52a27299b7083f35bdf4f78a0a406cd43606dd0d9b142a2417e904ffb"
     end
   end
 
